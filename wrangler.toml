@@ -1,0 +1,12 @@
+# Cloudflare Pages & D1 Configuration
+name = "personal-fitness-tracker"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "./dist"
+compatibility_flags = ["nodejs_compat"]
+
+# Cloudflare D1 Serverless SQLite Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "fitness-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"

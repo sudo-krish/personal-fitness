@@ -1,0 +1,32 @@
+{
+  "name": "personal-fitness-tracker",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply fitness-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply fitness-db --remote",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.4",
+    "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "^5.6.3",
+    "vite": "^8.2.2",
+    "wrangler": "^4.129.0"
+  }
+}

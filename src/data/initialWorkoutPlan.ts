@@ -1,0 +1,792 @@
+import { UserProfile, DaySchedule, Exercise } from '../types/workout';
+
+export const DAY_SCHEDULES: DaySchedule[] = [
+  {
+    "key": "monday",
+    "name": "Monday",
+    "splitTitle": "Push (Chest, Shoulders, Triceps)",
+    "shortName": "Mon",
+    "isRest": false,
+    "focusDescription": "Chest & shoulder pressing, tricep extensions with supersets."
+  },
+  {
+    "key": "tuesday",
+    "name": "Tuesday",
+    "splitTitle": "Pull (Back, Rear Delts, Biceps)",
+    "shortName": "Tue",
+    "isRest": false,
+    "focusDescription": "Pull-up / lat progressions, rows, posterior chain, and curls."
+  },
+  {
+    "key": "wednesday",
+    "name": "Wednesday",
+    "splitTitle": "REST / Active Recovery",
+    "shortName": "Wed",
+    "isRest": true,
+    "focusDescription": "Light 20-30m walk, gentle mobility & hydration recharge."
+  },
+  {
+    "key": "thursday",
+    "name": "Thursday",
+    "splitTitle": "Legs & Glutes",
+    "shortName": "Thu",
+    "isRest": false,
+    "focusDescription": "Squat patterns, hip thrusts, lunges, calf work & wall sits."
+  },
+  {
+    "key": "friday",
+    "name": "Friday",
+    "splitTitle": "Full Body Calisthenics & Functional Tone",
+    "shortName": "Fri",
+    "isRest": false,
+    "focusDescription": "Push-ups, step-ups, back rows, glute bridges, core tone."
+  },
+  {
+    "key": "saturday",
+    "name": "Saturday",
+    "splitTitle": "Core, Mobility & Conditioning",
+    "shortName": "Sat",
+    "isRest": false,
+    "focusDescription": "Hanging knee raises, planks, twists, plus 20-min cardio finisher."
+  },
+  {
+    "key": "sunday",
+    "name": "Sunday",
+    "splitTitle": "REST & Recharge",
+    "shortName": "Sun",
+    "isRest": true,
+    "focusDescription": "Full physical rest, meal prep, ready for Monday!"
+  }
+];
+
+export const DEFAULT_PROFILES: UserProfile[] = [
+  {
+    "id": "person_1",
+    "name": "Krish",
+    "title": "Person 1 (Male, 29)",
+    "gender": "Male",
+    "age": 29,
+    "stats": "181 cm, 80 kg",
+    "bio": "Returning after a 2-year gap. Focus: Rebuild tendon strength, progressive overload, RPE 7-8 target.",
+    "avatarEmoji": "K",
+    "themeColor": "#0284c7",
+    "accentGradient": "linear-gradient(135deg, #0284c7 0%, #2563eb 100%)",
+    "glowColor": "rgba(2, 132, 199, 0.22)"
+  },
+  {
+    "id": "person_2",
+    "name": "Partner",
+    "title": "Person 2 (Female, 27)",
+    "gender": "Female",
+    "age": 27,
+    "stats": "165 cm, 60 kg",
+    "bio": "Complete beginner. Focus: Motor control, bodyweight progressions (incline push-ups, dead hangs, box squats), 2s eccentric tempo.",
+    "avatarEmoji": "P",
+    "themeColor": "#e11d48",
+    "accentGradient": "linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)",
+    "glowColor": "rgba(225, 29, 72, 0.22)"
+  }
+];
+
+export const WORKOUT_PLAN_DATA: Record<string, Record<string, Exercise[]>> = {
+  "person_1": {
+    "monday": [
+      {
+        "id": "person_1_1",
+        "day": "Monday (Push)",
+        "pair": "Pair 1A",
+        "name": "Push-Up Progression (Standard or Hand-Release)",
+        "muscle": "Chest, Triceps",
+        "targetSets": 3,
+        "targetReps": "8-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=N4TVYoXKk-8"
+      },
+      {
+        "id": "person_1_2",
+        "day": "Monday (Push)",
+        "pair": "Pair 1B",
+        "name": "Dumbbell Flat Bench Press",
+        "muscle": "Chest, Triceps",
+        "targetSets": 3,
+        "targetReps": "8-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=1V3vpcaxRYQ"
+      },
+      {
+        "id": "person_1_3",
+        "day": "Monday (Push)",
+        "pair": "Pair 2A",
+        "name": "Seated Dumbbell Overhead Shoulder Press",
+        "muscle": "Shoulders",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=rO_iEImwHyo"
+      },
+      {
+        "id": "person_1_4",
+        "day": "Monday (Push)",
+        "pair": "Pair 2B",
+        "name": "Bodyweight Bench Dips (straight legs)",
+        "muscle": "Triceps",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=0326dy_-CzM"
+      },
+      {
+        "id": "person_1_5",
+        "day": "Monday (Push)",
+        "pair": "Pair 3A",
+        "name": "Dumbbell Lateral Raises",
+        "muscle": "Side Delts",
+        "targetSets": 3,
+        "targetReps": "12-15",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=Y29xKcze8Ik"
+      },
+      {
+        "id": "person_1_6",
+        "day": "Monday (Push)",
+        "pair": "Pair 3B",
+        "name": "Cable Tricep Pushdown",
+        "muscle": "Triceps",
+        "targetSets": 3,
+        "targetReps": "12-15",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=-zLyUAo1gMw"
+      }
+    ],
+    "tuesday": [
+      {
+        "id": "person_1_7",
+        "day": "Tuesday (Pull)",
+        "pair": "Pair 1A",
+        "name": "Negative (Eccentric) Pull-ups (slow 3-5s lower)",
+        "muscle": "Back, Biceps",
+        "targetSets": 3,
+        "targetReps": "4-6",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=gbPURTSxQLY"
+      },
+      {
+        "id": "person_1_8",
+        "day": "Tuesday (Pull)",
+        "pair": "Pair 1B",
+        "name": "Lat Pulldown (Pulling Machine)",
+        "muscle": "Lats & Upper Back",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=SALxEARiMkw"
+      },
+      {
+        "id": "person_1_9",
+        "day": "Tuesday (Pull)",
+        "pair": "Pair 2A",
+        "name": "Inverted Rows (Barbell set at waist height) or Seated Cable Row",
+        "muscle": "Mid Back",
+        "targetSets": 3,
+        "targetReps": "8-10",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=vwHG9Jfu4sw"
+      },
+      {
+        "id": "person_1_10",
+        "day": "Tuesday (Pull)",
+        "pair": "Pair 2B",
+        "name": "Dumbbell Romanian Deadlift (RDL)",
+        "muscle": "Hamstrings, Glutes, Lower Back",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=hQgFixeXdZo"
+      },
+      {
+        "id": "person_1_11",
+        "day": "Tuesday (Pull)",
+        "pair": "Pair 3",
+        "name": "Dumbbell Bicep Curls",
+        "muscle": "Biceps",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=XE_pHwbst04"
+      }
+    ],
+    "wednesday": [],
+    "thursday": [
+      {
+        "id": "person_1_12",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 1A",
+        "name": "Dumbbell Goblet Squat",
+        "muscle": "Quads, Glutes",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=9KzZD_n2r64"
+      },
+      {
+        "id": "person_1_13",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 1B",
+        "name": "Dumbbell Glute Bridges / Hip Thrusts",
+        "muscle": "Glutes & Hamstrings",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=V-Pk0ZfoszU"
+      },
+      {
+        "id": "person_1_14",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 2A",
+        "name": "Dumbbell or Bodyweight Reverse Lunges",
+        "muscle": "Quads & Glutes",
+        "targetSets": 3,
+        "targetReps": "8-10/leg",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=RZKXLMxPF_I"
+      },
+      {
+        "id": "person_1_15",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 2B",
+        "name": "Leg Extension or Leg Curl Machine",
+        "muscle": "Quads / Hamstrings",
+        "targetSets": 3,
+        "targetReps": "12-15",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=-PiO10ilRYc"
+      },
+      {
+        "id": "person_1_16",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 3A",
+        "name": "Wall Sit Hold",
+        "muscle": "Quads",
+        "targetSets": 3,
+        "targetReps": "30-45s",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": ""
+      },
+      {
+        "id": "person_1_17",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 3B",
+        "name": "Standing Calf Raises",
+        "muscle": "Calves",
+        "targetSets": 3,
+        "targetReps": "15-20",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": ""
+      }
+    ],
+    "friday": [
+      {
+        "id": "person_1_18",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 1A",
+        "name": "Incline / Floor Push-ups",
+        "muscle": "Chest, Triceps",
+        "targetSets": 3,
+        "targetReps": "8-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=N4TVYoXKk-8"
+      },
+      {
+        "id": "person_1_19",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 1B",
+        "name": "Bodyweight Step-ups (on bench) or Bulgarian Split Squats",
+        "muscle": "Quads, Glutes",
+        "targetSets": 3,
+        "targetReps": "8-10/leg",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=RZKXLMxPF_I"
+      },
+      {
+        "id": "person_1_20",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 2A",
+        "name": "Lat Pulldown or Inverted Rows",
+        "muscle": "Back, Biceps",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=SALxEARiMkw"
+      },
+      {
+        "id": "person_1_21",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 2B",
+        "name": "Bodyweight Glute Bridge (2-second hold at top)",
+        "muscle": "Glutes & Hamstrings",
+        "targetSets": 3,
+        "targetReps": "12-15",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=V-Pk0ZfoszU"
+      },
+      {
+        "id": "person_1_22",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 3A",
+        "name": "Dead Bug",
+        "muscle": "Core",
+        "targetSets": 3,
+        "targetReps": "10/side",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=GbSC02oU3To"
+      },
+      {
+        "id": "person_1_23",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 3B",
+        "name": "Mountain Climbers (controlled tempo)",
+        "muscle": "Core, Cardio",
+        "targetSets": 3,
+        "targetReps": "20-30 sec",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": ""
+      }
+    ],
+    "saturday": [
+      {
+        "id": "person_1_24",
+        "day": "Saturday (Core)",
+        "pair": "Pair 1A",
+        "name": "Hanging Knee Raises (or Lying Leg Raises)",
+        "muscle": "Core",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=X-ACS9vpRyU"
+      },
+      {
+        "id": "person_1_25",
+        "day": "Saturday (Core)",
+        "pair": "Pair 1B",
+        "name": "Forearm Plank",
+        "muscle": "Core",
+        "targetSets": 3,
+        "targetReps": "30-45 sec",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=A2b2EmIg0dA"
+      },
+      {
+        "id": "person_1_26",
+        "day": "Saturday (Core)",
+        "pair": "Pair 2A",
+        "name": "Russian Twists (Bodyweight or light DB)",
+        "muscle": "Obliques",
+        "targetSets": 3,
+        "targetReps": "16-20 total",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=wkD8rjkodUI"
+      },
+      {
+        "id": "person_1_27",
+        "day": "Saturday (Core)",
+        "pair": "Pair 2B",
+        "name": "Dead Bug / Bird Dog",
+        "muscle": "Core",
+        "targetSets": 3,
+        "targetReps": "10/side",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": "https://www.youtube.com/watch?v=GbSC02oU3To"
+      },
+      {
+        "id": "person_1_28",
+        "day": "Saturday (Core)",
+        "pair": "Finisher",
+        "name": "10 mins Treadmill (4.5 km/h, 4-6% inc) & 10 mins Bike",
+        "muscle": "Cardio",
+        "targetSets": 1,
+        "targetReps": "20 mins",
+        "targetRpe": "7-8",
+        "notes": "RPE 7-8",
+        "videoUrl": ""
+      }
+    ],
+    "sunday": []
+  },
+  "person_2": {
+    "monday": [
+      {
+        "id": "person_2_1",
+        "day": "Monday (Push)",
+        "pair": "Pair 1A",
+        "name": "Incline Push-ups (bench/barbell) or Knee Push-ups",
+        "muscle": "Chest, Triceps",
+        "targetSets": 3,
+        "targetReps": "8-10",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=N4TVYoXKk-8"
+      },
+      {
+        "id": "person_2_2",
+        "day": "Monday (Push)",
+        "pair": "Pair 1B",
+        "name": "Dumbbell Flat Bench Press",
+        "muscle": "Chest, Triceps",
+        "targetSets": 3,
+        "targetReps": "8-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2-5kg DB",
+        "videoUrl": "https://www.youtube.com/watch?v=1V3vpcaxRYQ"
+      },
+      {
+        "id": "person_2_3",
+        "day": "Monday (Push)",
+        "pair": "Pair 2A",
+        "name": "Seated Dumbbell Overhead Shoulder Press",
+        "muscle": "Shoulders",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2-5kg DB",
+        "videoUrl": "https://www.youtube.com/watch?v=rO_iEImwHyo"
+      },
+      {
+        "id": "person_2_4",
+        "day": "Monday (Push)",
+        "pair": "Pair 2B",
+        "name": "Bodyweight Bench Dips (bent knees)",
+        "muscle": "Triceps",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=0326dy_-CzM"
+      },
+      {
+        "id": "person_2_5",
+        "day": "Monday (Push)",
+        "pair": "Pair 3A",
+        "name": "Dumbbell Lateral Raises",
+        "muscle": "Side Delts",
+        "targetSets": 3,
+        "targetReps": "12-15",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2-5kg DB",
+        "videoUrl": "https://www.youtube.com/watch?v=Y29xKcze8Ik"
+      },
+      {
+        "id": "person_2_6",
+        "day": "Monday (Push)",
+        "pair": "Pair 3B",
+        "name": "Cable Tricep Pushdown",
+        "muscle": "Triceps",
+        "targetSets": 3,
+        "targetReps": "12-15",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=-zLyUAo1gMw"
+      }
+    ],
+    "tuesday": [
+      {
+        "id": "person_2_7",
+        "day": "Tuesday (Pull)",
+        "pair": "Pair 1A",
+        "name": "Active Dead Hangs / Scapular Pulls",
+        "muscle": "Back, Grip",
+        "targetSets": 3,
+        "targetReps": "15-25 sec",
+        "targetRpe": "7-8",
+        "notes": "Beginner",
+        "videoUrl": "https://www.youtube.com/watch?v=dOCQjaasbGs"
+      },
+      {
+        "id": "person_2_8",
+        "day": "Tuesday (Pull)",
+        "pair": "Pair 1B",
+        "name": "Lat Pulldown (Pulling Machine)",
+        "muscle": "Lats & Upper Back",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=SALxEARiMkw"
+      },
+      {
+        "id": "person_2_9",
+        "day": "Tuesday (Pull)",
+        "pair": "Pair 2A",
+        "name": "Inverted Rows (Barbell set at waist height) or Seated Cable Row",
+        "muscle": "Mid Back",
+        "targetSets": 3,
+        "targetReps": "8-10",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=vwHG9Jfu4sw"
+      },
+      {
+        "id": "person_2_10",
+        "day": "Tuesday (Pull)",
+        "pair": "Pair 2B",
+        "name": "Dumbbell Romanian Deadlift (RDL)",
+        "muscle": "Hamstrings, Glutes, Lower Back",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2-5kg DB",
+        "videoUrl": "https://www.youtube.com/watch?v=hQgFixeXdZo"
+      },
+      {
+        "id": "person_2_11",
+        "day": "Tuesday (Pull)",
+        "pair": "Pair 3",
+        "name": "Dumbbell Bicep Curls",
+        "muscle": "Biceps",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2-5kg DB",
+        "videoUrl": "https://www.youtube.com/watch?v=XE_pHwbst04"
+      }
+    ],
+    "wednesday": [],
+    "thursday": [
+      {
+        "id": "person_2_12",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 1A",
+        "name": "Bodyweight Box Squat (to bench) or Light Goblet Squat",
+        "muscle": "Quads, Glutes",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=sWKlUCGfX9s"
+      },
+      {
+        "id": "person_2_13",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 1B",
+        "name": "Dumbbell Glute Bridges / Hip Thrusts",
+        "muscle": "Glutes & Hamstrings",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2-5kg DB",
+        "videoUrl": "https://www.youtube.com/watch?v=V-Pk0ZfoszU"
+      },
+      {
+        "id": "person_2_14",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 2A",
+        "name": "Dumbbell or Bodyweight Reverse Lunges",
+        "muscle": "Quads & Glutes",
+        "targetSets": 3,
+        "targetReps": "8-10/leg",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=RZKXLMxPF_I"
+      },
+      {
+        "id": "person_2_15",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 2B",
+        "name": "Leg Extension or Leg Curl Machine",
+        "muscle": "Quads / Hamstrings",
+        "targetSets": 3,
+        "targetReps": "12-15",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=-PiO10ilRYc"
+      },
+      {
+        "id": "person_2_16",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 3A",
+        "name": "Wall Sit Hold",
+        "muscle": "Quads",
+        "targetSets": 3,
+        "targetReps": "30-45s",
+        "targetRpe": "7-8",
+        "notes": "Beginner",
+        "videoUrl": ""
+      },
+      {
+        "id": "person_2_17",
+        "day": "Thursday (Legs)",
+        "pair": "Pair 3B",
+        "name": "Standing Calf Raises",
+        "muscle": "Calves",
+        "targetSets": 3,
+        "targetReps": "15-20",
+        "targetRpe": "7-8",
+        "notes": "Beginner",
+        "videoUrl": ""
+      }
+    ],
+    "friday": [
+      {
+        "id": "person_2_18",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 1A",
+        "name": "Incline / Floor Push-ups",
+        "muscle": "Chest, Triceps",
+        "targetSets": 3,
+        "targetReps": "8-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=N4TVYoXKk-8"
+      },
+      {
+        "id": "person_2_19",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 1B",
+        "name": "Bodyweight Step-ups (on bench) or Bulgarian Split Squats",
+        "muscle": "Quads, Glutes",
+        "targetSets": 3,
+        "targetReps": "8-10/leg",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=RZKXLMxPF_I"
+      },
+      {
+        "id": "person_2_20",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 2A",
+        "name": "Lat Pulldown or Inverted Rows",
+        "muscle": "Back, Biceps",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=SALxEARiMkw"
+      },
+      {
+        "id": "person_2_21",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 2B",
+        "name": "Bodyweight Glute Bridge (2-second hold at top)",
+        "muscle": "Glutes & Hamstrings",
+        "targetSets": 3,
+        "targetReps": "12-15",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=V-Pk0ZfoszU"
+      },
+      {
+        "id": "person_2_22",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 3A",
+        "name": "Dead Bug",
+        "muscle": "Core",
+        "targetSets": 3,
+        "targetReps": "10/side",
+        "targetRpe": "7-8",
+        "notes": "Beginner",
+        "videoUrl": "https://www.youtube.com/watch?v=GbSC02oU3To"
+      },
+      {
+        "id": "person_2_23",
+        "day": "Friday (Full Body)",
+        "pair": "Pair 3B",
+        "name": "Mountain Climbers (controlled tempo)",
+        "muscle": "Core, Cardio",
+        "targetSets": 3,
+        "targetReps": "20-30 sec",
+        "targetRpe": "7-8",
+        "notes": "Beginner",
+        "videoUrl": ""
+      }
+    ],
+    "saturday": [
+      {
+        "id": "person_2_24",
+        "day": "Saturday (Core)",
+        "pair": "Pair 1A",
+        "name": "Hanging Knee Raises (or Lying Leg Raises)",
+        "muscle": "Core",
+        "targetSets": 3,
+        "targetReps": "10-12",
+        "targetRpe": "7-8",
+        "notes": "Beginner, 2s eccentric",
+        "videoUrl": "https://www.youtube.com/watch?v=X-ACS9vpRyU"
+      },
+      {
+        "id": "person_2_25",
+        "day": "Saturday (Core)",
+        "pair": "Pair 1B",
+        "name": "Forearm Plank",
+        "muscle": "Core",
+        "targetSets": 3,
+        "targetReps": "30-45 sec",
+        "targetRpe": "7-8",
+        "notes": "Beginner",
+        "videoUrl": "https://www.youtube.com/watch?v=A2b2EmIg0dA"
+      },
+      {
+        "id": "person_2_26",
+        "day": "Saturday (Core)",
+        "pair": "Pair 2A",
+        "name": "Russian Twists (Bodyweight or light DB)",
+        "muscle": "Obliques",
+        "targetSets": 3,
+        "targetReps": "16-20 total",
+        "targetRpe": "7-8",
+        "notes": "Beginner",
+        "videoUrl": "https://www.youtube.com/watch?v=wkD8rjkodUI"
+      },
+      {
+        "id": "person_2_27",
+        "day": "Saturday (Core)",
+        "pair": "Pair 2B",
+        "name": "Dead Bug / Bird Dog",
+        "muscle": "Core",
+        "targetSets": 3,
+        "targetReps": "10/side",
+        "targetRpe": "7-8",
+        "notes": "Beginner",
+        "videoUrl": "https://www.youtube.com/watch?v=GbSC02oU3To"
+      },
+      {
+        "id": "person_2_28",
+        "day": "Saturday (Core)",
+        "pair": "Finisher",
+        "name": "10 mins Treadmill (4.5 km/h, 4-6% inc) & 10 mins Bike",
+        "muscle": "Cardio",
+        "targetSets": 1,
+        "targetReps": "20 mins",
+        "targetRpe": "7-8",
+        "notes": "Beginner",
+        "videoUrl": ""
+      }
+    ],
+    "sunday": []
+  }
+};

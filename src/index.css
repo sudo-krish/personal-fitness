@@ -1,0 +1,341 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+/* ==========================================================================
+   LIGHT MINIMALIST LIQUID GLASS DESIGN SYSTEM (Swiss Geometric & Frosted Glass)
+   ========================================================================== */
+
+:root {
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Canvas & Light Ceramic Palette */
+  --bg-canvas: #f8fafc;
+  --bg-surface: rgba(255, 255, 255, 0.78);
+  --bg-surface-elevated: rgba(255, 255, 255, 0.92);
+  --bg-surface-subtle: rgba(241, 245, 249, 0.75);
+  --bg-inset: rgba(248, 250, 252, 0.85);
+
+  /* Optical Light Glass Borders & Hairlines */
+  --border-glass: rgba(255, 255, 255, 0.95);
+  --border-glass-subtle: rgba(15, 23, 42, 0.07);
+  --border-glass-hover: rgba(15, 23, 42, 0.14);
+  --border-glass-active: rgba(15, 23, 42, 0.22);
+  --specular-rim: inset 0 1px 2px 0 rgba(255, 255, 255, 1);
+  --specular-rim-subtle: inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+
+  /* Soft Ambient Light Shadows */
+  --shadow-glass-sm: 0 2px 8px -1px rgba(15, 23, 42, 0.04), 0 1px 4px -1px rgba(15, 23, 42, 0.02);
+  --shadow-glass-md: 0 12px 32px -6px rgba(15, 23, 42, 0.06), 0 4px 12px -2px rgba(15, 23, 42, 0.03), var(--specular-rim);
+  --shadow-glass-lg: 0 20px 48px -8px rgba(15, 23, 42, 0.08), 0 6px 18px -3px rgba(15, 23, 42, 0.04), var(--specular-rim);
+
+  /* Deep Slate Ink Typography (WCAG AAA Contrast) */
+  --text-primary: #0f172a;     /* Slate 900 */
+  --text-secondary: #475569;   /* Slate 600 */
+  --text-muted: #64748b;       /* Slate 500 */
+  --text-dim: #94a3b8;         /* Slate 400 */
+
+  /* Functional Status Accents */
+  --success: #059669;          /* Emerald 600 */
+  --success-light: #ecfdf5;    /* Emerald 50 */
+  --success-border: #a7f3d0;
+  --success-glow: rgba(5, 150, 105, 0.25);
+
+  --warning: #d97706;          /* Amber 600 */
+  --warning-light: #fffbeb;    /* Amber 50 */
+  --warning-border: #fde68a;
+
+  --danger: #e11d48;           /* Rose 600 */
+
+  /* Dynamic Profile Colors (set via JS per active profile) */
+  --profile-accent: #0284c7;   /* Default: Krish (Electric Azure) */
+  --profile-accent-soft: #f0f9ff;
+  --profile-border: #bae6fd;
+  --profile-glow: rgba(2, 132, 199, 0.22);
+  --profile-gradient: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+}
+
+/* ==========================================================================
+   RESET & BASE
+   ========================================================================== */
+
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  font-size: 16px;
+  background-color: var(--bg-canvas);
+}
+
+body {
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fixed Light Pattern Canvas (Dot Grid & Architectural Geometric Lines) */
+.pattern-canvas-underlay {
+  position: fixed;
+  inset: 0;
+  background-image: url('/light-pattern-bg.jpg');
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+  pointer-events: none;
+  z-index: -2;
+  opacity: 0.92;
+}
+
+/* Secondary Micro-dot Pattern Mesh for tactile depth */
+.pattern-canvas-underlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   FROSTED LIQUID ACRYLIC GLASS CARDS
+   ========================================================================== */
+
+.glass-panel {
+  background: var(--bg-surface);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid var(--border-glass);
+  outline: 1px solid var(--border-glass-subtle);
+  box-shadow: var(--shadow-glass-md);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel-elevated {
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-glass-lg);
+  border-color: #ffffff;
+}
+
+/* Pristine Specular Top Edge Light */
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.9) 25%,
+    var(--profile-accent) 50%,
+    rgba(255, 255, 255, 0.9) 75%,
+    transparent 100%
+  );
+  opacity: 0.75;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.glass-panel:hover::before {
+  opacity: 1;
+}
+
+/* Liquid Refraction Filter Underlay (Bends the background dot grid) */
+.liquid-shimmer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.04;
+  filter: url(#liquid-glass);
+  background: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.8), transparent 70%);
+  transition: opacity 0.3s ease;
+}
+
+.glass-panel:hover .liquid-shimmer {
+  opacity: 0.09;
+}
+
+/* ==========================================================================
+   TYPOGRAPHY
+   ========================================================================== */
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+
+p, span, label, input, button {
+  font-family: var(--font-sans);
+}
+
+/* ==========================================================================
+   BUTTONS & INTERACTIVE PILLS
+   ========================================================================== */
+
+.btn-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  outline: 1px solid var(--border-glass-subtle);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow-glass-sm), var(--specular-rim);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  text-decoration: none;
+}
+
+.btn-glass:hover {
+  background: #ffffff;
+  outline-color: var(--border-glass-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-glass-md);
+}
+
+.btn-glass:active {
+  transform: translateY(1px);
+}
+
+.btn-glass-primary {
+  background: var(--profile-gradient);
+  color: #ffffff;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  outline: none;
+  box-shadow: 0 8px 24px -4px var(--profile-glow), var(--specular-rim);
+}
+
+.btn-glass-primary:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 10px 28px -4px var(--profile-glow), var(--specular-rim);
+  transform: translateY(-1.5px);
+}
+
+/* Refined Pill Badges */
+.glass-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-glass-sm);
+}
+
+.glass-pill-accent {
+  background: var(--profile-accent-soft);
+  border-color: var(--profile-border);
+  color: var(--profile-accent);
+}
+
+.glass-pill-amber {
+  background: var(--warning-light);
+  border-color: var(--warning-border);
+  color: var(--warning);
+}
+
+.glass-pill-emerald {
+  background: var(--success-light);
+  border-color: var(--success-border);
+  color: var(--success);
+}
+
+/* ==========================================================================
+   INPUTS
+   ========================================================================== */
+
+.glass-input {
+  background: var(--bg-inset);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.925rem;
+  padding: 0.55rem 0.85rem;
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+  border-color: var(--profile-accent);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px var(--profile-glow);
+}
+
+/* ==========================================================================
+   MODAL SCRIM
+   ========================================================================== */
+
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: modalEnter 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalEnter {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ==========================================================================
+   SCROLLBARS
+   ========================================================================== */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.15);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.3);
+}
