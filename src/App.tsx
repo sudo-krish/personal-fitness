@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 
 import { DAY_SCHEDULES, WORKOUT_PLAN_DATA } from './data/initialWorkoutPlan';
 import { StorageService } from './services/storageService';
+import { PlanService } from './services/planService';
 import { Exercise, WorkoutDayLog, SetRecord } from './types/workout';
 import { getSplitCoverPath } from './lib/assetsMap';
 import { audio } from './lib/audio';
@@ -15,10 +16,17 @@ import { PairWorkoutView } from './components/mobile/PairWorkoutView';
 import { FullWorkoutListView } from './components/mobile/FullWorkoutListView';
 import { ExerciseListDrawer } from './components/mobile/ExerciseListDrawer';
 import { VideoDrawer } from './components/mobile/VideoDrawer';
+import { SidebarNavigation } from './components/mobile/SidebarNavigation';
+import { PlanEditorView } from './components/mobile/PlanEditorView';
 import { Dumbbell, Sparkles, Users, ListOrdered } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const App: React.FC = () => {
+  // Navigation & Page View: 'workout' (Daily Tracker) vs 'plan-editor' (Customization View)
+  const [activePageView, setActivePageView] = useState<'workout' | 'plan-editor'>('workout');
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [planRefreshKey, setPlanRefreshKey] = useState<number>(0);
+
   // Profiles State: Person 1 (Krish) ⇄ Person 2 (Theju)
   const [activeProfileId, setActiveProfileId] = useState<string>(() =>
     StorageService.getActiveProfileId()
@@ -43,6 +51,10 @@ export const App: React.FC = () => {
   const [dayLogs, setDayLogs] = useState<Record<string, WorkoutDayLog>>({});
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
+  // Dynamic Exercises loaded from SQLite (fitness.db)
+  const [customKrishExercises, setCustomKrishExercises] = useState<Exercise[] | null>(null);
+  const [customThejuExercises, setCustomThejuExercises] = useState<Exercise[] | null>(null);
+
   // Drawers
   const [isExerciseListOpen, setIsExerciseListOpen] = useState<boolean>(false);
   const [videoDrawerOpen, setVideoDrawerOpen] = useState<boolean>(false);
@@ -55,6 +67,16 @@ export const App: React.FC = () => {
   const [restSecondsRemaining, setRestSecondsRemaining] = useState<number>(0);
   const [isRestTimerRunning, setIsRestTimerRunning] = useState<boolean>(false);
   const restTimerRef = useRef<number | null>(null);
+
+  // Load exercises from SQLite (fitness.db)
+  useEffect(() => {
+    PlanService.getExercises('person_1', selectedDayKey).then((list) => {
+      setCustomKrishExercises(list);
+    });
+    PlanService.getExercises('person_2', selectedDayKey).then((list) => {
+      setCustomThejuExercises(list);
+    });
+  }, [selectedDayKey, planRefreshKey]);
 
   // Load Day Logs for both Person 1 (Krish) and Person 2 (Theju)
   useEffect(() => {
@@ -129,8 +151,10 @@ export const App: React.FC = () => {
 
   // Current Schedule & Exercises for both partners
   const currentSchedule = DAY_SCHEDULES.find((d) => d.key === selectedDayKey) || DAY_SCHEDULES[0];
-  const krishExercises: Exercise[] = WORKOUT_PLAN_DATA['person_1']?.[selectedDayKey] || [];
-  const thejuExercises: Exercise[] = WORKOUT_PLAN_DATA['person_2']?.[selectedDayKey] || [];
+  const krishExercises: Exercise[] =
+    customKrishExercises || WORKOUT_PLAN_DATA['person_1']?.[selectedDayKey] || [];
+  const thejuExercises: Exercise[] =
+    customThejuExercises || WORKOUT_PLAN_DATA['person_2']?.[selectedDayKey] || [];
 
   const krishLogKey = `person_1_${selectedDayKey}`;
   const thejuLogKey = `person_2_${selectedDayKey}`;
@@ -156,7 +180,7 @@ export const App: React.FC = () => {
     setNumber: number,
     updates: Partial<SetRecord>
   ) => {
-    const targetExercises = WORKOUT_PLAN_DATA[profileId]?.[selectedDayKey] || [];
+    const targetExercises = profileId === 'person_1' ? krishExercises : thejuExercises;
     const targetEx = targetExercises.find((e) => e.id === exerciseId);
     if (!targetEx) return;
 
@@ -172,7 +196,6 @@ export const App: React.FC = () => {
 
     const targetSetsCount = targetEx.targetSets || 3;
 
-    // Ensure sets array is populated
     let sets = [...(exProgress.sets || [])];
     while (sets.length < targetSetsCount) {
       sets.push({
@@ -213,7 +236,7 @@ export const App: React.FC = () => {
     updatedLog.completedPercentage = completedPct;
     updatedLog.isWorkoutFinished = completedPct === 100;
 
-    // Save to local Storage & queue sync to D1 SQLite
+    // Save to local Storage & queue sync to SQLite (fitness.db)
     StorageService.saveDayLog(updatedLog);
     setDayLogs((prev) => ({ ...prev, [logKey]: updatedLog }));
 
@@ -239,6 +262,13 @@ export const App: React.FC = () => {
   const handleOpenVideo = (url: string, title: string) => {
     setSelectedVideo({ url, title });
     setVideoDrawerOpen(true);
+  };
+
+  // Reset all plans in SQLite
+  const handleResetAllPlans = async () => {
+    await PlanService.resetDayPlan('person_1', selectedDayKey);
+    await PlanService.resetDayPlan('person_2', selectedDayKey);
+    setPlanRefreshKey((prev) => prev + 1);
   };
 
   // Day Completion map for 7-day dock
@@ -272,7 +302,7 @@ export const App: React.FC = () => {
         <div className="liquid-blob-center" />
       </div>
 
-      {/* Top App Bar with Partner Switcher */}
+      {/* Top App Bar with Sidebar Menu Trigger */}
       <TopAppBar
         activeProfile={activeProfileKey}
         onToggleProfile={handleToggleProfile}
@@ -282,6 +312,7 @@ export const App: React.FC = () => {
           StorageService.setActiveProfileId(nextId);
           setCurrentExerciseIndex(0);
         }}
+        onOpenSidebar={() => setIsSidebarOpen(true)}
         isSyncing={isSyncing}
         streakCount={streak}
       />
@@ -298,316 +329,329 @@ export const App: React.FC = () => {
           zIndex: 1,
         }}
       >
-        <AnimatePresence mode="wait">
-          {currentSchedule.isRest ? (
-            /* Active Recovery Rest Day View */
-            <motion.div
-              key="rest-view"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.2 }}
-              className="focus-card"
-              style={{ textAlign: 'center', padding: '36px 20px', marginTop: '12px' }}
-            >
-              {/* Technical Corner Crosshairs */}
-              <span className="tech-crosshair tl">+</span>
-              <span className="tech-crosshair tr">+</span>
-              <span className="tech-crosshair bl">+</span>
-              <span className="tech-crosshair br">+</span>
-              <div
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '9999px',
-                  background: 'var(--emerald-light)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 16px auto',
-                  color: 'var(--emerald)',
-                }}
+        {activePageView === 'plan-editor' ? (
+          /* Exercise Plan Editor View */
+          <PlanEditorView
+            initialProfile={activeProfileKey}
+            onBackToWorkout={() => setActivePageView('workout')}
+            onOpenVideo={handleOpenVideo}
+            onPlanChanged={() => setPlanRefreshKey((prev) => prev + 1)}
+          />
+        ) : (
+          /* Daily Workout Tracking View */
+          <AnimatePresence mode="wait">
+            {currentSchedule.isRest ? (
+              /* Active Recovery Rest Day View */
+              <motion.div
+                key="rest-view"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.2 }}
+                className="focus-card"
+                style={{ textAlign: 'center', padding: '36px 20px', marginTop: '12px' }}
               >
-                <Sparkles style={{ width: '32px', height: '32px' }} />
-              </div>
-
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'var(--emerald)',
-                }}
-              >
-                Recovery Day
-              </span>
-
-              <h2
-                style={{
-                  fontFamily: 'var(--font-athletic)',
-                  fontSize: '1.75rem',
-                  fontWeight: 900,
-                  color: '#0F172A',
-                  marginTop: '4px',
-                }}
-              >
-                ACTIVE REST & RECHARGE
-              </h2>
-
-              <p
-                style={{
-                  fontSize: '0.875rem',
-                  color: '#64748B',
-                  lineHeight: 1.5,
-                  maxWidth: '320px',
-                  margin: '8px auto 20px auto',
-                }}
-              >
-                {currentSchedule.focusDescription ||
-                  'Muscles grow while resting! Prioritize 20-30m brisk walking, hydration, and 8 hours of quality sleep.'}
-              </p>
-
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  marginBottom: '24px',
-                }}
-              >
-                <span
+                {/* Technical Corner Crosshairs */}
+                <span className="tech-crosshair tl">+</span>
+                <span className="tech-crosshair tr">+</span>
+                <span className="tech-crosshair bl">+</span>
+                <span className="tech-crosshair br">+</span>
+                <div
                   style={{
-                    padding: '6px 12px',
+                    width: '64px',
+                    height: '64px',
                     borderRadius: '9999px',
-                    background: '#F1F5F9',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: '#475569',
-                  }}
-                >
-                  🚶 30m Walk
-                </span>
-                <span
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '9999px',
-                    background: '#F1F5F9',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: '#475569',
-                  }}
-                >
-                  💧 3L Water
-                </span>
-                <span
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '9999px',
-                    background: '#F1F5F9',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: '#475569',
-                  }}
-                >
-                  😴 8h Sleep
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  haptics.tap();
-                  setSelectedDayKey('monday');
-                  setCurrentExerciseIndex(0);
-                  setViewMode('pair');
-                }}
-                className={`log-set-btn ${isKrish ? 'krish' : 'theju'}`}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-              >
-                <Dumbbell style={{ width: '18px', height: '18px' }} />
-                <span>START / PREVIEW PUSH DAY 1</span>
-              </button>
-            </motion.div>
-          ) : (
-            /* Active Workout Day: Pair Mode OR All Exercises List Mode */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {/* Mode Segmented Control: [ 👥 Pair View (Side by Side) ] [ 📋 My Full List ] */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  padding: '4px',
-                  backgroundColor: 'rgba(241, 245, 249, 0.75)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 255, 255, 0.95)',
-                  borderRadius: '16px',
-                  boxShadow:
-                    'inset 0 1px 2px rgba(255, 255, 255, 0.95), 0 2px 8px rgba(15, 23, 42, 0.03)',
-                  width: '100%',
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    haptics.tap();
-                    setViewMode('pair');
-                  }}
-                  style={{
-                    position: 'relative',
-                    flex: 1,
+                    background: 'var(--emerald-light)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '6px',
-                    padding: '8px 12px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    color: viewMode === 'pair' ? '#0F172A' : '#64748B',
-                    fontWeight: viewMode === 'pair' ? 800 : 600,
-                    fontSize: '0.8125rem',
-                    cursor: 'pointer',
-                    zIndex: 1,
-                    transition: 'all 0.18s ease',
+                    margin: '0 auto 16px auto',
+                    color: 'var(--emerald)',
                   }}
                 >
-                  {viewMode === 'pair' && (
-                    <motion.div
-                      layoutId="view-mode-pill"
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        borderRadius: '12px',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(16px)',
-                        border: '1px solid rgba(255, 255, 255, 0.95)',
-                        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.06), inset 0 1px 1px #FFFFFF',
-                        zIndex: -1,
-                      }}
-                      transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                    />
-                  )}
-                  <Users
+                  <Sparkles style={{ width: '32px', height: '32px' }} />
+                </div>
+
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'var(--emerald)',
+                  }}
+                >
+                  Recovery Day
+                </span>
+
+                <h2
+                  style={{
+                    fontFamily: 'var(--font-athletic)',
+                    fontSize: '1.75rem',
+                    fontWeight: 900,
+                    color: '#0F172A',
+                    marginTop: '4px',
+                  }}
+                >
+                  ACTIVE REST & RECHARGE
+                </h2>
+
+                <p
+                  style={{
+                    fontSize: '0.875rem',
+                    color: '#64748B',
+                    lineHeight: 1.5,
+                    maxWidth: '320px',
+                    margin: '8px auto 20px auto',
+                  }}
+                >
+                  {currentSchedule.focusDescription ||
+                    'Muscles grow while resting! Prioritize 20-30m brisk walking, hydration, and 8 hours of quality sleep.'}
+                </p>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginBottom: '24px',
+                  }}
+                >
+                  <span
                     style={{
-                      width: '15px',
-                      height: '15px',
-                      color: isKrish ? 'var(--azure)' : 'var(--rose)',
+                      padding: '6px 12px',
+                      borderRadius: '9999px',
+                      background: '#F1F5F9',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: '#475569',
                     }}
-                  />
-                  <span>Pair View (Side by Side)</span>
-                </button>
+                  >
+                    🚶 30m Walk
+                  </span>
+                  <span
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '9999px',
+                      background: '#F1F5F9',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: '#475569',
+                    }}
+                  >
+                    💧 3L Water
+                  </span>
+                  <span
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '9999px',
+                      background: '#F1F5F9',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: '#475569',
+                    }}
+                  >
+                    😴 8h Sleep
+                  </span>
+                </div>
 
                 <button
                   type="button"
                   onClick={() => {
                     haptics.tap();
-                    setViewMode('list');
+                    setSelectedDayKey('monday');
+                    setCurrentExerciseIndex(0);
+                    setViewMode('pair');
                   }}
+                  className={`log-set-btn ${isKrish ? 'krish' : 'theju'}`}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  <Dumbbell style={{ width: '18px', height: '18px' }} />
+                  <span>START / PREVIEW PUSH DAY 1</span>
+                </button>
+              </motion.div>
+            ) : (
+              /* Active Workout Day: Pair Mode OR All Exercises List Mode */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Mode Segmented Control: [ 👥 Pair View (Side by Side) ] [ 📋 My Full List ] */}
+                <div
                   style={{
-                    position: 'relative',
-                    flex: 1,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
-                    padding: '8px 12px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    color: viewMode === 'list' ? '#0F172A' : '#64748B',
-                    fontWeight: viewMode === 'list' ? 800 : 600,
-                    fontSize: '0.8125rem',
-                    cursor: 'pointer',
-                    zIndex: 1,
-                    transition: 'all 0.18s ease',
+                    padding: '4px',
+                    backgroundColor: 'rgba(241, 245, 249, 0.75)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.95)',
+                    borderRadius: '16px',
+                    boxShadow:
+                      'inset 0 1px 2px rgba(255, 255, 255, 0.95), 0 2px 8px rgba(15, 23, 42, 0.03)',
+                    width: '100%',
                   }}
                 >
-                  {viewMode === 'list' && (
-                    <motion.div
-                      layoutId="view-mode-pill"
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        borderRadius: '12px',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(16px)',
-                        border: '1px solid rgba(255, 255, 255, 0.95)',
-                        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.06), inset 0 1px 1px #FFFFFF',
-                        zIndex: -1,
-                      }}
-                      transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                    />
-                  )}
-                  <ListOrdered
-                    style={{
-                      width: '15px',
-                      height: '15px',
-                      color: isKrish ? 'var(--azure)' : 'var(--rose)',
+                  <button
+                    type="button"
+                    onClick={() => {
+                      haptics.tap();
+                      setViewMode('pair');
                     }}
-                  />
-                  <span>My Full List ({currentExercises.length})</span>
-                </button>
-              </div>
+                    style={{
+                      position: 'relative',
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '8px 12px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: viewMode === 'pair' ? '#0F172A' : '#64748B',
+                      fontWeight: viewMode === 'pair' ? 800 : 600,
+                      fontSize: '0.8125rem',
+                      cursor: 'pointer',
+                      zIndex: 1,
+                      transition: 'all 0.18s ease',
+                    }}
+                  >
+                    {viewMode === 'pair' && (
+                      <motion.div
+                        layoutId="view-mode-pill"
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          borderRadius: '12px',
+                          background: 'rgba(255, 255, 255, 0.95)',
+                          backdropFilter: 'blur(16px)',
+                          border: '1px solid rgba(255, 255, 255, 0.95)',
+                          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.06), inset 0 1px 1px #FFFFFF',
+                          zIndex: -1,
+                        }}
+                        transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                      />
+                    )}
+                    <Users
+                      style={{
+                        width: '15px',
+                        height: '15px',
+                        color: isKrish ? 'var(--azure)' : 'var(--rose)',
+                      }}
+                    />
+                    <span>Pair View (Side by Side)</span>
+                  </button>
 
-              {/* View Mode Content */}
-              {viewMode === 'list' ? (
-                <FullWorkoutListView
-                  exercises={currentExercises}
-                  dayLog={currentDayLog}
-                  activeProfile={activeProfileKey}
-                  onUpdateSet={(exId, setNum, upds) =>
-                    handleUpdateSet(activeProfileId as 'person_1' | 'person_2', exId, setNum, upds)
-                  }
-                  onOpenVideo={handleOpenVideo}
-                  onSelectFocusExercise={(idx) => {
-                    setCurrentExerciseIndex(idx);
-                    setViewMode('pair');
-                  }}
-                  coverImage={coverImage}
-                  splitTitle={currentSchedule.splitTitle}
-                  dayName={currentSchedule.name}
-                  focusDescription={currentSchedule.focusDescription}
-                />
-              ) : (
-                <PairWorkoutView
-                  schedule={currentSchedule}
-                  krishExercises={krishExercises}
-                  thejuExercises={thejuExercises}
-                  krishLog={krishDayLog}
-                  thejuLog={thejuDayLog}
-                  activeProfile={activeProfileKey}
-                  onUpdateSet={handleUpdateSet}
-                  onOpenVideo={handleOpenVideo}
-                  restSecondsRemaining={restSecondsRemaining}
-                  isRestRunning={isRestTimerRunning}
-                  onStartRest={handleStartRestTimer}
-                  onAdjustRest={handleAdjustRestTime}
-                  onSkipRest={handleSkipRest}
-                  coverImage={coverImage}
-                />
-              )}
-            </div>
-          )}
-        </AnimatePresence>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      haptics.tap();
+                      setViewMode('list');
+                    }}
+                    style={{
+                      position: 'relative',
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '8px 12px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: viewMode === 'list' ? '#0F172A' : '#64748B',
+                      fontWeight: viewMode === 'list' ? 800 : 600,
+                      fontSize: '0.8125rem',
+                      cursor: 'pointer',
+                      zIndex: 1,
+                      transition: 'all 0.18s ease',
+                    }}
+                  >
+                    {viewMode === 'list' && (
+                      <motion.div
+                        layoutId="view-mode-pill"
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          borderRadius: '12px',
+                          background: 'rgba(255, 255, 255, 0.95)',
+                          backdropFilter: 'blur(16px)',
+                          border: '1px solid rgba(255, 255, 255, 0.95)',
+                          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.06), inset 0 1px 1px #FFFFFF',
+                          zIndex: -1,
+                        }}
+                        transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                      />
+                    )}
+                    <ListOrdered
+                      style={{
+                        width: '15px',
+                        height: '15px',
+                        color: isKrish ? 'var(--azure)' : 'var(--rose)',
+                      }}
+                    />
+                    <span>My Full List ({currentExercises.length})</span>
+                  </button>
+                </div>
+
+                {/* View Mode Content */}
+                {viewMode === 'list' ? (
+                  <FullWorkoutListView
+                    exercises={currentExercises}
+                    dayLog={currentDayLog}
+                    activeProfile={activeProfileKey}
+                    onUpdateSet={(exId, setNum, upds) =>
+                      handleUpdateSet(activeProfileId as 'person_1' | 'person_2', exId, setNum, upds)
+                    }
+                    onOpenVideo={handleOpenVideo}
+                    onSelectFocusExercise={(idx) => {
+                      setCurrentExerciseIndex(idx);
+                      setViewMode('pair');
+                    }}
+                    coverImage={coverImage}
+                    splitTitle={currentSchedule.splitTitle}
+                    dayName={currentSchedule.name}
+                    focusDescription={currentSchedule.focusDescription}
+                  />
+                ) : (
+                  <PairWorkoutView
+                    schedule={currentSchedule}
+                    krishExercises={krishExercises}
+                    thejuExercises={thejuExercises}
+                    krishLog={krishDayLog}
+                    thejuLog={thejuDayLog}
+                    activeProfile={activeProfileKey}
+                    onUpdateSet={handleUpdateSet}
+                    onOpenVideo={handleOpenVideo}
+                    restSecondsRemaining={restSecondsRemaining}
+                    isRestRunning={isRestTimerRunning}
+                    onStartRest={handleStartRestTimer}
+                    onAdjustRest={handleAdjustRestTime}
+                    onSkipRest={handleSkipRest}
+                    coverImage={coverImage}
+                  />
+                )}
+              </div>
+            )}
+          </AnimatePresence>
+        )}
       </main>
 
       {/* 7-Day Schedule Bottom Navigation Dock */}
-      <DaysBottomNav
-        schedules={DAY_SCHEDULES}
-        selectedDayKey={selectedDayKey}
-        onSelectDay={(dayKey) => {
-          setSelectedDayKey(dayKey);
-          setCurrentExerciseIndex(0);
-        }}
-        todayKey={todayKey}
-        dayCompletionStatus={dayCompletionStatus}
-        activeProfile={activeProfileKey}
-        onOpenExerciseList={() => setIsExerciseListOpen(true)}
-      />
+      {activePageView === 'workout' && (
+        <DaysBottomNav
+          schedules={DAY_SCHEDULES}
+          selectedDayKey={selectedDayKey}
+          onSelectDay={(dayKey) => {
+            setSelectedDayKey(dayKey);
+            setCurrentExerciseIndex(0);
+          }}
+          todayKey={todayKey}
+          dayCompletionStatus={dayCompletionStatus}
+          activeProfile={activeProfileKey}
+          onOpenExerciseList={() => setIsExerciseListOpen(true)}
+        />
+      )}
 
       {/* Slide-Up Exercise List Drawer */}
       <ExerciseListDrawer
@@ -630,6 +674,17 @@ export const App: React.FC = () => {
         onOpenChange={setVideoDrawerOpen}
         videoUrl={selectedVideo.url}
         exerciseName={selectedVideo.title}
+      />
+
+      {/* Slide-out Sidebar Navigation Menu */}
+      <SidebarNavigation
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        activeView={activePageView}
+        onSelectView={(view) => setActivePageView(view)}
+        activeProfile={activeProfileKey}
+        onToggleProfile={handleToggleProfile}
+        onResetPlan={handleResetAllPlans}
       />
     </div>
   );

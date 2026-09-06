@@ -39,3 +39,15 @@ Thumbs.db
 # Agent scratch & temporary files
 .agent/
 .system_generated/
+
+# Local SQLite databases & cache
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+fitness.db
+fitness.db.json
+
+# Backend API files not needed for Cloudflare (Cloudflare Pages Functions in functions/ are used instead)
+server/
+

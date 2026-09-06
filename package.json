@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "pages:dev": "npm run build && wrangler pages dev",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "db:generate": "drizzle-kit generate",

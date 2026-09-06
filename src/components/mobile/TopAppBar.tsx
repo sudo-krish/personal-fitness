@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Cloud, CloudCheck, Flame, Check } from 'lucide-react';
+import { Cloud, CloudCheck, Flame, Check, Menu } from 'lucide-react';
 import { haptics } from '../../lib/haptics';
 
 interface TopAppBarProps {
   activeProfile: 'krish' | 'theju';
   onToggleProfile: () => void;
   onSelectProfile?: (profile: 'krish' | 'theju') => void;
+  onOpenSidebar?: () => void;
   isSyncing: boolean;
   streakCount: number;
 }
@@ -15,6 +16,7 @@ export function TopAppBar({
   activeProfile,
   onToggleProfile,
   onSelectProfile,
+  onOpenSidebar,
   isSyncing,
   streakCount,
 }: TopAppBarProps) {
@@ -46,20 +48,48 @@ export function TopAppBar({
   return (
     <header className="top-bar-header">
       <div className="top-bar-inner">
-        {/* Left: Minimalist Line-Based Strength Emblem */}
-        <div
-          className="top-bar-brand"
-          onClick={handleScrollTop}
-          title="Tap to scroll to top"
-          style={{ cursor: 'pointer' }}
-        >
-          <div className="top-bar-logo">
-            <img
-              src="/assets/app-logo.jpg"
-              alt="Minimalist Strength Emblem"
-              width={34}
-              height={34}
-            />
+        {/* Left: Sidebar Menu Trigger & Strength Emblem */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {onOpenSidebar && (
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                onOpenSidebar();
+              }}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '10px',
+                border: '1px solid rgba(226, 232, 240, 0.9)',
+                backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#0F172A',
+                cursor: 'pointer',
+                boxShadow: 'var(--shadow-sm)',
+              }}
+              title="Open Navigation Menu"
+            >
+              <Menu style={{ width: '16px', height: '16px' }} />
+            </button>
+          )}
+
+          <div
+            className="top-bar-brand"
+            onClick={handleScrollTop}
+            title="Tap to scroll to top"
+            style={{ cursor: 'pointer' }}
+          >
+            <div className="top-bar-logo">
+              <img
+                src="/assets/app-logo.jpg"
+                alt="Minimalist Strength Emblem"
+                width={34}
+                height={34}
+              />
+            </div>
           </div>
         </div>
 
