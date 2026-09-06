@@ -1,757 +1,636 @@
-import React, { useState, useEffect, useRef } from 'react';
-import * as confettiModule from 'canvas-confetti';
-const confetti = (confettiModule as any).default ?? confettiModule;
-import { UserProfile, Exercise, WorkoutDayLog } from './types/workout';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import confetti from 'canvas-confetti';
+
 import { DAY_SCHEDULES, WORKOUT_PLAN_DATA } from './data/initialWorkoutPlan';
 import { StorageService } from './services/storageService';
+import { Exercise, WorkoutDayLog, SetRecord } from './types/workout';
+import { getSplitCoverPath } from './lib/assetsMap';
+import { audio } from './lib/audio';
+import { haptics } from './lib/haptics';
 
-import { LiquidFilterDefs } from './components/LiquidFilterDefs';
-import { Header } from './components/Header';
-import { DaySelector } from './components/DaySelector';
-import { ExerciseCard } from './components/ExerciseCard';
-import { ProfileSwitcherModal } from './components/ProfileSwitcherModal';
-import { RestTimerModal } from './components/RestTimerModal';
-import { VideoModal } from './components/VideoModal';
-import { PartnerSupersetView } from './components/PartnerSupersetView';
-import { Award, Moon, Dumbbell, Sparkles, Droplets, Footprints, Salad } from 'lucide-react';
+// Mobile-First Components
+import { TopAppBar } from './components/mobile/TopAppBar';
+import { DaysBottomNav } from './components/mobile/DaysBottomNav';
+import { PairWorkoutView } from './components/mobile/PairWorkoutView';
+import { FullWorkoutListView } from './components/mobile/FullWorkoutListView';
+import { ExerciseListDrawer } from './components/mobile/ExerciseListDrawer';
+import { VideoDrawer } from './components/mobile/VideoDrawer';
+import { Dumbbell, Sparkles, Users, ListOrdered } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export const App: React.FC = () => {
-  const [profiles, setProfiles] = useState<UserProfile[]>(() =>
-    StorageService.getProfiles()
-  );
+  // Profiles State: Person 1 (Krish) ⇄ Person 2 (Theju)
   const [activeProfileId, setActiveProfileId] = useState<string>(() =>
     StorageService.getActiveProfileId()
   );
 
-  const activeProfile =
-    profiles.find((p) => p.id === activeProfileId) || profiles[0];
+  const isKrish = activeProfileId === 'person_1';
+  const activeProfileKey: 'krish' | 'theju' = isKrish ? 'krish' : 'theju';
 
+  // Navigation & Day Selection:
   const todayKey = StorageService.getTodayDayKey();
   const todayDateStr = StorageService.getTodayDateStr();
-  const [selectedDayKey, setSelectedDayKey] = useState<string>(todayKey);
+  const initialDayKey = todayKey === 'sunday' || todayKey === 'wednesday' ? 'monday' : todayKey;
+  const [selectedDayKey, setSelectedDayKey] = useState<string>(initialDayKey);
 
+  // View Mode: 'pair' (side-by-side synchronized view) vs 'list' (single-user scrollable list)
+  const [viewMode, setViewMode] = useState<'pair' | 'list'>('pair');
+
+  // Active Exercise selection for drawers
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0);
+
+  // Day Logs State (indexed by `${profileId}_${dayKey}`)
   const [dayLogs, setDayLogs] = useState<Record<string, WorkoutDayLog>>({});
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
 
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isRestTimerModalOpen, setIsRestTimerModalOpen] = useState(false);
-  const [activeVideoExercise, setActiveVideoExercise] = useState<Exercise | null>(
-    null
-  );
-  const [partnerModeActive, setPartnerModeActive] = useState(false);
+  // Drawers
+  const [isExerciseListOpen, setIsExerciseListOpen] = useState<boolean>(false);
+  const [videoDrawerOpen, setVideoDrawerOpen] = useState<boolean>(false);
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string; title: string }>({
+    url: '',
+    title: '',
+  });
 
   // Rest Timer State
-  const [timerDuration, setTimerDuration] = useState<number>(60);
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
-  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
-  const timerIntervalRef = useRef<number | null>(null);
+  const [restSecondsRemaining, setRestSecondsRemaining] = useState<number>(0);
+  const [isRestTimerRunning, setIsRestTimerRunning] = useState<boolean>(false);
+  const restTimerRef = useRef<number | null>(null);
 
-  // Load Day Log for current activeProfile and selectedDayKey
+  // Load Day Logs for both Person 1 (Krish) and Person 2 (Theju)
   useEffect(() => {
-    const logKey = `${activeProfileId}_${selectedDayKey}`;
-    if (!dayLogs[logKey]) {
-      const loaded = StorageService.getDayLog(
-        activeProfileId,
-        todayDateStr,
-        selectedDayKey
-      );
-      setDayLogs((prev) => ({ ...prev, [logKey]: loaded }));
-    }
-
-    // Hydrate from SQLite (Local Miniflare or Cloudflare D1)
-    StorageService.fetchRemoteDayLog(
-      activeProfileId,
-      todayDateStr,
-      selectedDayKey
-    ).then((remoteLog) => {
-      if (remoteLog) {
-        setDayLogs((prev) => ({ ...prev, [logKey]: remoteLog }));
+    ['person_1', 'person_2'].forEach((pId) => {
+      const logKey = `${pId}_${selectedDayKey}`;
+      if (!dayLogs[logKey]) {
+        const loaded = StorageService.getDayLog(pId, todayDateStr, selectedDayKey);
+        setDayLogs((prev) => ({ ...prev, [logKey]: loaded }));
       }
+
+      // Hydrate from SQLite / Cloudflare D1
+      setIsSyncing(true);
+      StorageService.fetchRemoteDayLog(pId, todayDateStr, selectedDayKey)
+        .then((remoteLog) => {
+          if (remoteLog) {
+            setDayLogs((prev) => ({ ...prev, [logKey]: remoteLog }));
+          }
+        })
+        .finally(() => {
+          setIsSyncing(false);
+        });
     });
-  }, [activeProfileId, selectedDayKey, todayDateStr]);
+  }, [selectedDayKey, todayDateStr]);
 
-  // Update root CSS custom properties when active profile changes
+  // Rest Timer Countdown Interval
   useEffect(() => {
-    if (activeProfile) {
-      document.documentElement.style.setProperty(
-        '--profile-accent',
-        activeProfile.themeColor
-      );
-      document.documentElement.style.setProperty(
-        '--profile-gradient',
-        activeProfile.accentGradient
-      );
-      document.documentElement.style.setProperty(
-        '--profile-glow',
-        activeProfile.glowColor
-      );
-      document.documentElement.style.setProperty(
-        '--profile-accent-soft',
-        activeProfile.id === 'person_1'
-          ? 'rgba(2, 132, 199, 0.12)'
-          : 'rgba(225, 29, 72, 0.12)'
-      );
-    }
-  }, [activeProfile]);
-
-  // Rest Timer countdown interval
-  useEffect(() => {
-    if (isTimerRunning && secondsRemaining > 0) {
-      timerIntervalRef.current = window.setInterval(() => {
-        setSecondsRemaining((prev) => {
+    if (isRestTimerRunning && restSecondsRemaining > 0) {
+      restTimerRef.current = window.setInterval(() => {
+        setRestSecondsRemaining((prev) => {
           if (prev <= 1) {
-            setIsTimerRunning(false);
-            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            setIsRestTimerRunning(false);
+            if (restTimerRef.current) clearInterval(restTimerRef.current);
+            audio.playRestComplete();
+            haptics.alarm();
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
     } else {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
+      if (restTimerRef.current) clearInterval(restTimerRef.current);
     }
 
     return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
+      if (restTimerRef.current) clearInterval(restTimerRef.current);
     };
-  }, [isTimerRunning, secondsRemaining]);
+  }, [isRestTimerRunning, restSecondsRemaining]);
 
-  const startRestTimer = (duration: number) => {
-    setTimerDuration(duration);
-    setSecondsRemaining(duration);
-    setIsTimerRunning(true);
+  // Rest Timer Controls
+  const handleStartRestTimer = (duration: number = 60) => {
+    setRestSecondsRemaining(duration);
+    setIsRestTimerRunning(true);
   };
 
+  const handleAdjustRestTime = (delta: number) => {
+    setRestSecondsRemaining((prev) => Math.max(0, prev + delta));
+  };
+
+  const handleSkipRest = () => {
+    setIsRestTimerRunning(false);
+    setRestSecondsRemaining(0);
+    haptics.tap();
+  };
+
+  // Toggle Profile (Krish ⇄ Theju)
+  const handleToggleProfile = () => {
+    const nextId = activeProfileId === 'person_1' ? 'person_2' : 'person_1';
+    setActiveProfileId(nextId);
+    StorageService.setActiveProfileId(nextId);
+    setCurrentExerciseIndex(0);
+  };
+
+  // Current Schedule & Exercises for both partners
+  const currentSchedule = DAY_SCHEDULES.find((d) => d.key === selectedDayKey) || DAY_SCHEDULES[0];
+  const krishExercises: Exercise[] = WORKOUT_PLAN_DATA['person_1']?.[selectedDayKey] || [];
+  const thejuExercises: Exercise[] = WORKOUT_PLAN_DATA['person_2']?.[selectedDayKey] || [];
+
+  const krishLogKey = `person_1_${selectedDayKey}`;
+  const thejuLogKey = `person_2_${selectedDayKey}`;
+
+  const krishDayLog: WorkoutDayLog =
+    dayLogs[krishLogKey] || StorageService.getDayLog('person_1', todayDateStr, selectedDayKey);
+  const thejuDayLog: WorkoutDayLog =
+    dayLogs[thejuLogKey] || StorageService.getDayLog('person_2', todayDateStr, selectedDayKey);
+
+  // Active profile exercises & log (for single list view & drawer)
+  const currentExercises: Exercise[] = isKrish ? krishExercises : thejuExercises;
+  const currentDayLog: WorkoutDayLog = isKrish ? krishDayLog : thejuDayLog;
+
+  const safeExerciseIndex = Math.min(
+    Math.max(0, currentExerciseIndex),
+    Math.max(0, currentExercises.length - 1)
+  );
+
+  // Update Set in SQLite and state (for either person_1 or person_2)
   const handleUpdateSet = (
-    profileId: string,
+    profileId: 'person_1' | 'person_2',
     exerciseId: string,
-    setIndex: number,
-    field: 'weightKg' | 'repsCompleted' | 'rpeAchieved' | 'isCompleted',
-    val: string | boolean
+    setNumber: number,
+    updates: Partial<SetRecord>
   ) => {
+    const targetExercises = WORKOUT_PLAN_DATA[profileId]?.[selectedDayKey] || [];
+    const targetEx = targetExercises.find((e) => e.id === exerciseId);
+    if (!targetEx) return;
+
     const logKey = `${profileId}_${selectedDayKey}`;
-    const currentLog =
-      dayLogs[logKey] ||
-      StorageService.getDayLog(profileId, todayDateStr, selectedDayKey);
+    const targetLog: WorkoutDayLog =
+      dayLogs[logKey] || StorageService.getDayLog(profileId, todayDateStr, selectedDayKey);
 
-    const exerciseProgress = currentLog.exercisesProgress[exerciseId];
-    if (!exerciseProgress || !exerciseProgress.sets[setIndex]) return;
-
-    const updatedSets = [...exerciseProgress.sets];
-    updatedSets[setIndex] = {
-      ...updatedSets[setIndex],
-      [field]: val,
+    const exProgress = targetLog?.exercisesProgress?.[exerciseId] || {
+      exerciseId,
+      sets: [],
+      isFullyCompleted: false,
     };
 
+    const targetSetsCount = targetEx.targetSets || 3;
+
+    // Ensure sets array is populated
+    let sets = [...(exProgress.sets || [])];
+    while (sets.length < targetSetsCount) {
+      sets.push({
+        setNumber: sets.length + 1,
+        weightKg: '0',
+        repsCompleted: '0',
+        rpeAchieved: '',
+        isCompleted: false,
+      });
+    }
+
+    const setIdx = sets.findIndex((s) => s.setNumber === setNumber);
+    if (setIdx !== -1) {
+      sets[setIdx] = { ...sets[setIdx], ...updates };
+    }
+
+    const isFullyCompleted = sets.length > 0 && sets.every((s) => s.isCompleted);
+
     const updatedLog: WorkoutDayLog = {
-      ...currentLog,
+      ...targetLog,
       exercisesProgress: {
-        ...currentLog.exercisesProgress,
+        ...(targetLog?.exercisesProgress || {}),
         [exerciseId]: {
-          ...exerciseProgress,
-          sets: updatedSets,
+          ...exProgress,
+          sets,
+          isFullyCompleted,
         },
       },
     };
 
+    // Calculate completion percentage
+    const allExIds = targetExercises.map((e) => e.id);
+    const completedExCount = allExIds.filter(
+      (id) => updatedLog.exercisesProgress[id]?.isFullyCompleted
+    ).length;
+    const completedPct =
+      allExIds.length > 0 ? Math.round((completedExCount / allExIds.length) * 100) : 0;
+    updatedLog.completedPercentage = completedPct;
+    updatedLog.isWorkoutFinished = completedPct === 100;
+
+    // Save to local Storage & queue sync to D1 SQLite
     StorageService.saveDayLog(updatedLog);
     setDayLogs((prev) => ({ ...prev, [logKey]: updatedLog }));
 
-    // Confetti celebration when entire session finishes
-    if (!currentLog.isWorkoutFinished && updatedLog.isWorkoutFinished) {
-      StorageService.playChime('all-done');
+    // If whole workout just finished, blast celebration!
+    if (!targetLog.isWorkoutFinished && updatedLog.isWorkoutFinished) {
+      audio.playCelebration();
+      haptics.celebration();
       try {
         confetti({
-          particleCount: 140,
-          spread: 90,
+          particleCount: 150,
+          spread: 80,
           origin: { y: 0.6 },
-          colors: [activeProfile.themeColor, '#10b981', '#fbbf24', '#ffffff'],
+          colors:
+            profileId === 'person_1'
+              ? ['#0284C7', '#38BDF8', '#10B981']
+              : ['#E11D48', '#FB7185', '#10B981'],
         });
-      } catch {
-        // Fallback
-      }
+      } catch {}
     }
   };
 
-  const handleResetToday = () => {
-    if (window.confirm("Reset today's progress and weights for this session?")) {
-      const cleanLog = StorageService.getDayLog(
-        activeProfileId,
-        'clean_seed',
-        selectedDayKey
-      );
-      cleanLog.dateStr = todayDateStr;
-      StorageService.saveDayLog(cleanLog);
-      setDayLogs((prev) => ({
-        ...prev,
-        [`${activeProfileId}_${selectedDayKey}`]: cleanLog,
-      }));
+  // Video guide handler
+  const handleOpenVideo = (url: string, title: string) => {
+    setSelectedVideo({ url, title });
+    setVideoDrawerOpen(true);
+  };
+
+  // Day Completion map for 7-day dock
+  const dayCompletionStatus = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    for (const d of DAY_SCHEDULES) {
+      const log = dayLogs[`${activeProfileId}_${d.key}`];
+      map[d.key] = log ? log.isWorkoutFinished : false;
     }
-  };
+    return map;
+  }, [activeProfileId, dayLogs]);
 
-  const currentLogKey = `${activeProfileId}_${selectedDayKey}`;
-  const currentDayLog = dayLogs[currentLogKey] || {
-    profileId: activeProfileId,
-    dateStr: todayDateStr,
-    dayKey: selectedDayKey,
-    exercisesProgress: {},
-    completedPercentage: 0,
-    isWorkoutFinished: false,
-    updatedAt: new Date().toISOString(),
-  };
-
-  const currentSchedule =
-    DAY_SCHEDULES.find((d) => d.key === selectedDayKey) || DAY_SCHEDULES[0];
-  const currentExercises =
-    WORKOUT_PLAN_DATA[activeProfileId]?.[selectedDayKey] || [];
-  const stats = StorageService.getUserStats(activeProfileId);
-
-  const dayCompletionStatus: Record<string, boolean> = {};
-  DAY_SCHEDULES.forEach((d) => {
-    const log = dayLogs[`${activeProfileId}_${d.key}`];
-    dayCompletionStatus[d.key] = log ? log.isWorkoutFinished : false;
-  });
-
-  const logsByProfile: Record<string, Record<string, any>> = {};
-  profiles.forEach((p) => {
-    const pLog = dayLogs[`${p.id}_${selectedDayKey}`];
-    logsByProfile[p.id] = pLog ? pLog.exercisesProgress : {};
-  });
+  const streak = StorageService.getUserStats(activeProfileId).currentStreak;
+  const coverImage = getSplitCoverPath(selectedDayKey);
 
   return (
-    <div className="fitness-app-root">
-      {/* Light Architectural Pattern & Geometric Grid Underlay */}
-      <div className="pattern-canvas-underlay" />
-
-      {/* Dynamic Ambient Mesh Lights */}
-      <div className="ambient-mesh">
-        <div className="ambient-light-1" />
-        <div className="ambient-light-2" />
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--bg-canvas)',
+        color: 'var(--text-primary)',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+      }}
+    >
+      {/* Ambient Liquid Floating Mesh Canvas */}
+      <div className="liquid-ambient-canvas" aria-hidden="true">
+        <div className="liquid-blob-azure" />
+        <div className="liquid-blob-rose" />
+        <div className="liquid-blob-center" />
       </div>
 
-      {/* Liquid Glass SVG Filters */}
-      <LiquidFilterDefs />
-
-      <div className="app-shell">
-        {/* Executive Header */}
-        <Header
-          activeProfile={activeProfile}
-          stats={stats}
-          onOpenProfileSwitcher={() => setIsProfileModalOpen(true)}
-          onOpenRestTimer={() => setIsRestTimerModalOpen(true)}
-          timerSecondsRemaining={isTimerRunning ? secondsRemaining : null}
-          partnerModeActive={partnerModeActive}
-          onTogglePartnerMode={() => setPartnerModeActive((prev) => !prev)}
-          onResetToday={handleResetToday}
-        />
-
-        {/* 7-Day Capsule Rail */}
-        <DaySelector
-          schedules={DAY_SCHEDULES}
-          selectedDayKey={selectedDayKey}
-          todayDayKey={todayKey}
-          dayCompletionStatus={dayCompletionStatus}
-          onSelectDay={(key) => setSelectedDayKey(key)}
-          accentColor={activeProfile.themeColor}
-          glowColor={activeProfile.glowColor}
-        />
-
-        {partnerModeActive ? (
-          /* Partner Superset Swap System */
-          <PartnerSupersetView
-            profiles={profiles}
-            selectedDayKey={selectedDayKey}
-            dayTitle={currentSchedule.splitTitle}
-            logsByProfile={logsByProfile}
-            onUpdateSet={handleUpdateSet}
-            onOpenVideo={(ex) => setActiveVideoExercise(ex)}
-            onClosePartnerMode={() => setPartnerModeActive(false)}
-          />
-        ) : (
-          /* Single Profile Workout View */
-          <main className="main-content-flow">
-            {/* Session Headline Hero Card */}
-            <div className="glass-panel session-hero-card">
-              <div className="liquid-shimmer" />
-
-              <div className="hero-details">
-                <div className="hero-day-tag">
-                  <span>{currentSchedule.name}</span>
-                  {selectedDayKey === todayKey && (
-                    <span className="hero-today-pill">TODAY</span>
-                  )}
-                </div>
-                <h1 className="hero-split-name">{currentSchedule.splitTitle}</h1>
-                <p className="hero-focus-description">
-                  {currentSchedule.focusDescription}
-                </p>
-
-                {/* Progress Bar inside Hero */}
-                {!currentSchedule.isRest && (
-                  <div className="session-progress-module">
-                    <div className="progress-labels-row">
-                      <span className="progress-text-label">Workout Progress</span>
-                      <span
-                        className="progress-percentage-val"
-                        style={{ color: activeProfile.themeColor }}
-                      >
-                        {currentDayLog.completedPercentage}%
-                      </span>
-                    </div>
-                    <div className="progress-hollow-track">
-                      <div
-                        className="progress-fluid-fill"
-                        style={{
-                          width: `${currentDayLog.completedPercentage}%`,
-                          background: activeProfile.accentGradient,
-                          boxShadow: `0 0 16px ${activeProfile.glowColor}`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="hero-meta-badge">
-                {currentSchedule.isRest ? (
-                  <div className="rest-indicator-orb">
-                    <Moon size={24} className="rest-icon-glyph" />
-                    <span>Rest Day</span>
-                  </div>
-                ) : (
-                  <div className="exercise-count-pod">
-                    <Dumbbell size={22} className="count-pod-icon" />
-                    <div className="count-pod-text">
-                      <span className="count-huge">{currentExercises.length}</span>
-                      <span className="count-sub">EXERCISES</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Workout Finished Celebration Banner */}
-            {currentDayLog.isWorkoutFinished && !currentSchedule.isRest && (
-              <div className="glass-panel celebration-banner">
-                <div className="celebration-content">
-                  <div className="celebration-badge-icon">
-                    <Award size={26} strokeWidth={2.5} />
-                  </div>
-                  <div>
-                    <h2 className="celebration-header">Session Completed!</h2>
-                    <p className="celebration-text">
-                      Great intensity today. All planned sets logged and executed.
-                    </p>
-                  </div>
-                </div>
-                <div className="streak-increment-chip">
-                  <Sparkles size={14} /> Streak +1
-                </div>
-              </div>
-            )}
-
-            {/* Rest Day Peaceful Zen Screen */}
-            {currentSchedule.isRest ? (
-              <div className="glass-panel rest-zen-panel">
-                <div className="zen-moon-container">
-                  <Moon size={48} className="zen-moon-glyph" />
-                </div>
-                <h2 className="zen-headline">Active Recovery & Restoration</h2>
-                <p className="zen-description">
-                  {selectedDayKey === 'wednesday'
-                    ? 'Mid-week active recovery. Take a gentle 20-30 minute walk, perform mobility stretching, hydrate well, and allow muscle fibers to repair.'
-                    : 'Sunday physical recharge. Prepare wholesome meals, rest your mind and body, and reset your motivation for Monday.'}
-                </p>
-
-                <div className="zen-tips-row">
-                  <div className="zen-tip-box glass-panel">
-                    <div className="zen-tip-icon-box">
-                      <Droplets size={20} className="tip-icon-cyan" />
-                    </div>
-                    <div>
-                      <h4 className="zen-tip-name">Hydration</h4>
-                      <p className="zen-tip-detail">2.5L+ Pure Water & Electrolytes</p>
-                    </div>
-                  </div>
-
-                  <div className="zen-tip-box glass-panel">
-                    <div className="zen-tip-icon-box">
-                      <Footprints size={20} className="tip-icon-emerald" />
-                    </div>
-                    <div>
-                      <h4 className="zen-tip-name">Mobility</h4>
-                      <p className="zen-tip-detail">20m Gentle Outdoor Walk</p>
-                    </div>
-                  </div>
-
-                  <div className="zen-tip-box glass-panel">
-                    <div className="zen-tip-icon-box">
-                      <Salad size={20} className="tip-icon-amber" />
-                    </div>
-                    <div>
-                      <h4 className="zen-tip-name">Nutrition</h4>
-                      <p className="zen-tip-detail">High Quality Protein & Sleep</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* Exercise Cards List */
-              <div className="exercises-stack">
-                {currentExercises.map((exercise) => (
-                  <ExerciseCard
-                    key={exercise.id}
-                    exercise={exercise}
-                    progress={currentDayLog.exercisesProgress[exercise.id]}
-                    onUpdateSet={(exId, sIdx, field, val) =>
-                      handleUpdateSet(activeProfileId, exId, sIdx, field, val)
-                    }
-                    onOpenVideo={(ex) => setActiveVideoExercise(ex)}
-                    onTriggerRestTimer={(secs) => startRestTimer(secs)}
-                    accentColor={activeProfile.themeColor}
-                  />
-                ))}
-              </div>
-            )}
-          </main>
-        )}
-      </div>
-
-      {/* Netflix Profile Switcher Modal */}
-      {isProfileModalOpen && (
-        <ProfileSwitcherModal
-          profiles={profiles}
-          activeProfileId={activeProfileId}
-          onSelectProfile={(id) => {
-            setActiveProfileId(id);
-            StorageService.setActiveProfileId(id);
-          }}
-          onUpdateProfile={(updated) => {
-            const newProfiles = profiles.map((p) =>
-              p.id === updated.id ? updated : p
-            );
-            setProfiles(newProfiles);
-            StorageService.saveProfiles(newProfiles);
-          }}
-          onClose={() => setIsProfileModalOpen(false)}
-        />
-      )}
-
-      {/* Rest Timer Modal */}
-      <RestTimerModal
-        isOpen={isRestTimerModalOpen}
-        onClose={() => setIsRestTimerModalOpen(false)}
-        secondsRemaining={secondsRemaining}
-        totalDuration={timerDuration}
-        isRunning={isTimerRunning}
-        onStart={(duration) => startRestTimer(duration)}
-        onPause={() => setIsTimerRunning(false)}
-        onResume={() => setIsTimerRunning(true)}
-        onReset={() => {
-          setIsTimerRunning(false);
-          setSecondsRemaining(timerDuration);
+      {/* Top App Bar with Partner Switcher */}
+      <TopAppBar
+        activeProfile={activeProfileKey}
+        onToggleProfile={handleToggleProfile}
+        onSelectProfile={(profile) => {
+          const nextId = profile === 'krish' ? 'person_1' : 'person_2';
+          setActiveProfileId(nextId);
+          StorageService.setActiveProfileId(nextId);
+          setCurrentExerciseIndex(0);
         }}
-        onAdjustTime={(delta) =>
-          setSecondsRemaining((prev) => Math.max(0, prev + delta))
-        }
-        accentColor={activeProfile.themeColor}
+        isSyncing={isSyncing}
+        streakCount={streak}
       />
 
-      {/* Video Modal */}
-      <VideoModal
-        exercise={activeVideoExercise}
-        onClose={() => setActiveVideoExercise(null)}
-        accentColor={activeProfile.themeColor}
+      {/* Main Content Area */}
+      <main
+        style={{
+          maxWidth: '560px',
+          width: '100%',
+          margin: '0 auto',
+          padding: '12px 14px 96px 14px',
+          flex: 1,
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
+        <AnimatePresence mode="wait">
+          {currentSchedule.isRest ? (
+            /* Active Recovery Rest Day View */
+            <motion.div
+              key="rest-view"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.2 }}
+              className="focus-card"
+              style={{ textAlign: 'center', padding: '36px 20px', marginTop: '12px' }}
+            >
+              {/* Technical Corner Crosshairs */}
+              <span className="tech-crosshair tl">+</span>
+              <span className="tech-crosshair tr">+</span>
+              <span className="tech-crosshair bl">+</span>
+              <span className="tech-crosshair br">+</span>
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '9999px',
+                  background: 'var(--emerald-light)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px auto',
+                  color: 'var(--emerald)',
+                }}
+              >
+                <Sparkles style={{ width: '32px', height: '32px' }} />
+              </div>
+
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--emerald)',
+                }}
+              >
+                Recovery Day
+              </span>
+
+              <h2
+                style={{
+                  fontFamily: 'var(--font-athletic)',
+                  fontSize: '1.75rem',
+                  fontWeight: 900,
+                  color: '#0F172A',
+                  marginTop: '4px',
+                }}
+              >
+                ACTIVE REST & RECHARGE
+              </h2>
+
+              <p
+                style={{
+                  fontSize: '0.875rem',
+                  color: '#64748B',
+                  lineHeight: 1.5,
+                  maxWidth: '320px',
+                  margin: '8px auto 20px auto',
+                }}
+              >
+                {currentSchedule.focusDescription ||
+                  'Muscles grow while resting! Prioritize 20-30m brisk walking, hydration, and 8 hours of quality sleep.'}
+              </p>
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  marginBottom: '24px',
+                }}
+              >
+                <span
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '9999px',
+                    background: '#F1F5F9',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: '#475569',
+                  }}
+                >
+                  🚶 30m Walk
+                </span>
+                <span
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '9999px',
+                    background: '#F1F5F9',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: '#475569',
+                  }}
+                >
+                  💧 3L Water
+                </span>
+                <span
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '9999px',
+                    background: '#F1F5F9',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: '#475569',
+                  }}
+                >
+                  😴 8h Sleep
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  haptics.tap();
+                  setSelectedDayKey('monday');
+                  setCurrentExerciseIndex(0);
+                  setViewMode('pair');
+                }}
+                className={`log-set-btn ${isKrish ? 'krish' : 'theju'}`}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                <Dumbbell style={{ width: '18px', height: '18px' }} />
+                <span>START / PREVIEW PUSH DAY 1</span>
+              </button>
+            </motion.div>
+          ) : (
+            /* Active Workout Day: Pair Mode OR All Exercises List Mode */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Mode Segmented Control: [ 👥 Pair View (Side by Side) ] [ 📋 My Full List ] */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '4px',
+                  backgroundColor: 'rgba(241, 245, 249, 0.75)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.95)',
+                  borderRadius: '16px',
+                  boxShadow:
+                    'inset 0 1px 2px rgba(255, 255, 255, 0.95), 0 2px 8px rgba(15, 23, 42, 0.03)',
+                  width: '100%',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptics.tap();
+                    setViewMode('pair');
+                  }}
+                  style={{
+                    position: 'relative',
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: viewMode === 'pair' ? '#0F172A' : '#64748B',
+                    fontWeight: viewMode === 'pair' ? 800 : 600,
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                    zIndex: 1,
+                    transition: 'all 0.18s ease',
+                  }}
+                >
+                  {viewMode === 'pair' && (
+                    <motion.div
+                      layoutId="view-mode-pill"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '12px',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(16px)',
+                        border: '1px solid rgba(255, 255, 255, 0.95)',
+                        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.06), inset 0 1px 1px #FFFFFF',
+                        zIndex: -1,
+                      }}
+                      transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                    />
+                  )}
+                  <Users
+                    style={{
+                      width: '15px',
+                      height: '15px',
+                      color: isKrish ? 'var(--azure)' : 'var(--rose)',
+                    }}
+                  />
+                  <span>Pair View (Side by Side)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    haptics.tap();
+                    setViewMode('list');
+                  }}
+                  style={{
+                    position: 'relative',
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: viewMode === 'list' ? '#0F172A' : '#64748B',
+                    fontWeight: viewMode === 'list' ? 800 : 600,
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                    zIndex: 1,
+                    transition: 'all 0.18s ease',
+                  }}
+                >
+                  {viewMode === 'list' && (
+                    <motion.div
+                      layoutId="view-mode-pill"
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '12px',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(16px)',
+                        border: '1px solid rgba(255, 255, 255, 0.95)',
+                        boxShadow: '0 2px 8px rgba(15, 23, 42, 0.06), inset 0 1px 1px #FFFFFF',
+                        zIndex: -1,
+                      }}
+                      transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                    />
+                  )}
+                  <ListOrdered
+                    style={{
+                      width: '15px',
+                      height: '15px',
+                      color: isKrish ? 'var(--azure)' : 'var(--rose)',
+                    }}
+                  />
+                  <span>My Full List ({currentExercises.length})</span>
+                </button>
+              </div>
+
+              {/* View Mode Content */}
+              {viewMode === 'list' ? (
+                <FullWorkoutListView
+                  exercises={currentExercises}
+                  dayLog={currentDayLog}
+                  activeProfile={activeProfileKey}
+                  onUpdateSet={(exId, setNum, upds) =>
+                    handleUpdateSet(activeProfileId as 'person_1' | 'person_2', exId, setNum, upds)
+                  }
+                  onOpenVideo={handleOpenVideo}
+                  onSelectFocusExercise={(idx) => {
+                    setCurrentExerciseIndex(idx);
+                    setViewMode('pair');
+                  }}
+                  coverImage={coverImage}
+                  splitTitle={currentSchedule.splitTitle}
+                  dayName={currentSchedule.name}
+                  focusDescription={currentSchedule.focusDescription}
+                />
+              ) : (
+                <PairWorkoutView
+                  schedule={currentSchedule}
+                  krishExercises={krishExercises}
+                  thejuExercises={thejuExercises}
+                  krishLog={krishDayLog}
+                  thejuLog={thejuDayLog}
+                  activeProfile={activeProfileKey}
+                  onUpdateSet={handleUpdateSet}
+                  onOpenVideo={handleOpenVideo}
+                  restSecondsRemaining={restSecondsRemaining}
+                  isRestRunning={isRestTimerRunning}
+                  onStartRest={handleStartRestTimer}
+                  onAdjustRest={handleAdjustRestTime}
+                  onSkipRest={handleSkipRest}
+                  coverImage={coverImage}
+                />
+              )}
+            </div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* 7-Day Schedule Bottom Navigation Dock */}
+      <DaysBottomNav
+        schedules={DAY_SCHEDULES}
+        selectedDayKey={selectedDayKey}
+        onSelectDay={(dayKey) => {
+          setSelectedDayKey(dayKey);
+          setCurrentExerciseIndex(0);
+        }}
+        todayKey={todayKey}
+        dayCompletionStatus={dayCompletionStatus}
+        activeProfile={activeProfileKey}
+        onOpenExerciseList={() => setIsExerciseListOpen(true)}
       />
 
-      <style>{`
-        .fitness-app-root {
-          min-height: 100vh;
-          padding: 1.5rem 1.25rem 4rem;
-          display: flex;
-          justify-content: center;
-          position: relative;
-        }
-        .app-shell {
-          max-width: 980px;
-          width: 100%;
-        }
-        .session-hero-card {
-          padding: 2.25rem 2.5rem;
-          margin-bottom: 1.75rem;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 1.5rem;
-          flex-wrap: wrap;
-          background: rgba(255, 255, 255, 0.88);
-          border: 1px solid var(--border-glass-strong);
-          border-radius: 24px;
-          box-shadow: var(--shadow-md);
-        }
-        .hero-details {
-          flex: 1;
-          min-width: 280px;
-        }
-        .hero-day-tag {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-          font-size: 0.75rem;
-          font-weight: 800;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: var(--profile-accent);
-          margin-bottom: 0.4rem;
-        }
-        .hero-today-pill {
-          background: var(--profile-accent);
-          color: #ffffff;
-          font-size: 0.65rem;
-          font-weight: 800;
-          letter-spacing: 0.05em;
-          padding: 0.15rem 0.5rem;
-          border-radius: 6px;
-          box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.15);
-        }
-        .hero-split-name {
-          font-size: 2rem;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-          line-height: 1.2;
-          color: var(--text-primary);
-          margin-bottom: 0.4rem;
-        }
-        .hero-focus-description {
-          font-size: 0.925rem;
-          color: var(--text-secondary);
-          max-width: 540px;
-          margin-bottom: 1.25rem;
-          line-height: 1.5;
-        }
-        .session-progress-module {
-          max-width: 440px;
-        }
-        .progress-labels-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-size: 0.8rem;
-          font-weight: 700;
-          margin-bottom: 0.45rem;
-        }
-        .progress-text-label {
-          color: var(--text-muted);
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          font-size: 0.72rem;
-          font-weight: 800;
-        }
-        .progress-percentage-val {
-          font-family: var(--font-display);
-          font-weight: 800;
-          font-size: 0.9rem;
-        }
-        .progress-hollow-track {
-          width: 100%;
-          height: 8px;
-          border-radius: 999px;
-          background: rgba(15, 23, 42, 0.08);
-          overflow: hidden;
-        }
-        .progress-fluid-fill {
-          height: 100%;
-          border-radius: 999px;
-          transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .hero-meta-badge {
-          display: flex;
-          align-items: center;
-        }
-        .exercise-count-pod {
-          display: flex;
-          align-items: center;
-          gap: 0.85rem;
-          background: rgba(255, 255, 255, 0.9);
-          border: 1px solid var(--border-glass);
-          padding: 0.85rem 1.35rem;
-          border-radius: 18px;
-          box-shadow: var(--shadow-sm);
-        }
-        .count-pod-icon {
-          color: var(--profile-accent);
-        }
-        .count-huge {
-          display: block;
-          font-family: var(--font-display);
-          font-weight: 900;
-          font-size: 1.75rem;
-          line-height: 1;
-          color: var(--text-primary);
-        }
-        .count-sub {
-          font-size: 0.65rem;
-          font-weight: 800;
-          color: var(--text-muted);
-          letter-spacing: 0.1em;
-        }
-        .rest-indicator-orb {
-          display: flex;
-          align-items: center;
-          gap: 0.65rem;
-          padding: 0.85rem 1.35rem;
-          border-radius: 18px;
-          background: rgba(124, 58, 237, 0.08);
-          border: 1px solid rgba(124, 58, 237, 0.2);
-          color: #7c3aed;
-          font-family: var(--font-display);
-          font-weight: 800;
-          font-size: 0.9rem;
-        }
-        .celebration-banner {
-          padding: 1.25rem 1.75rem;
-          margin-bottom: 1.5rem;
-          border: 1px solid rgba(5, 150, 105, 0.3);
-          background: rgba(5, 150, 105, 0.1);
-          border-radius: 20px;
-          box-shadow: var(--shadow-sm);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 1rem;
-        }
-        .celebration-content {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-        }
-        .celebration-badge-icon {
-          width: 46px;
-          height: 46px;
-          border-radius: 14px;
-          background: rgba(5, 150, 105, 0.18);
-          border: 1px solid rgba(5, 150, 105, 0.35);
-          color: #059669;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .celebration-header {
-          font-size: 1.2rem;
-          font-weight: 800;
-          color: #059669;
-          line-height: 1.2;
-        }
-        .celebration-text {
-          font-size: 0.85rem;
-          color: var(--text-secondary);
-        }
-        .streak-increment-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.35rem;
-          font-family: var(--font-display);
-          font-weight: 800;
-          font-size: 0.825rem;
-          color: #d97706;
-          background: rgba(217, 119, 6, 0.12);
-          border: 1px solid rgba(217, 119, 6, 0.3);
-          padding: 0.45rem 0.85rem;
-          border-radius: 10px;
-        }
-        .rest-zen-panel {
-          padding: 3.5rem 2.5rem;
-          text-align: center;
-          background: rgba(255, 255, 255, 0.88);
-          border: 1px solid var(--border-glass-strong);
-          border-radius: 24px;
-          box-shadow: var(--shadow-md);
-        }
-        .zen-moon-container {
-          margin-bottom: 1.25rem;
-        }
-        .zen-moon-glyph {
-          color: #7c3aed;
-        }
-        .zen-headline {
-          font-size: 2rem;
-          font-weight: 800;
-          color: var(--text-primary);
-          margin-bottom: 0.5rem;
-        }
-        .zen-description {
-          max-width: 580px;
-          margin: 0 auto 2.25rem;
-          color: var(--text-secondary);
-          font-size: 0.95rem;
-          line-height: 1.6;
-        }
-        .zen-tips-row {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-          gap: 1.25rem;
-          max-width: 680px;
-          margin: 0 auto;
-        }
-        .zen-tip-box {
-          display: flex;
-          align-items: center;
-          gap: 0.85rem;
-          padding: 1.15rem 1.35rem;
-          text-align: left;
-          background: rgba(255, 255, 255, 0.9);
-          border: 1px solid var(--border-glass);
-          border-radius: 18px;
-          box-shadow: var(--shadow-sm);
-        }
-        .zen-tip-icon-box {
-          width: 42px;
-          height: 42px;
-          border-radius: 12px;
-          background: rgba(15, 23, 42, 0.04);
-          border: 1px solid rgba(15, 23, 42, 0.08);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-        .tip-icon-cyan { color: #0284c7; }
-        .tip-icon-emerald { color: #059669; }
-        .tip-icon-amber { color: #d97706; }
-        .zen-tip-name {
-          font-size: 0.95rem;
-          font-weight: 800;
-          color: var(--text-primary);
-        }
-        .zen-tip-detail {
-          font-size: 0.78rem;
-          color: var(--text-muted);
-          margin-top: 0.15rem;
-        }
-        .exercises-stack {
-          display: flex;
-          flex-direction: column;
-        }
-        @media (max-width: 640px) {
-          .session-hero-card {
-            padding: 1.5rem;
-          }
-          .hero-split-name {
-            font-size: 1.5rem;
-          }
-          .hero-meta-badge {
-            width: 100%;
-          }
-          .exercise-count-pod {
-            width: 100%;
-            justify-content: center;
-          }
-        }
-      `}</style>
+      {/* Slide-Up Exercise List Drawer */}
+      <ExerciseListDrawer
+        isOpen={isExerciseListOpen}
+        onOpenChange={setIsExerciseListOpen}
+        exercises={currentExercises}
+        currentExerciseIndex={safeExerciseIndex}
+        onSelectExercise={(idx) => {
+          setCurrentExerciseIndex(idx);
+          setViewMode('pair');
+        }}
+        dayLog={currentDayLog}
+        activeProfile={activeProfileKey}
+        splitTitle={currentSchedule.splitTitle}
+      />
+
+      {/* Form Technique Demonstration Drawer */}
+      <VideoDrawer
+        isOpen={videoDrawerOpen}
+        onOpenChange={setVideoDrawerOpen}
+        videoUrl={selectedVideo.url}
+        exerciseName={selectedVideo.title}
+      />
     </div>
   );
 };

@@ -75,13 +75,13 @@ export const DEFAULT_PROFILES: UserProfile[] = [
   },
   {
     "id": "person_2",
-    "name": "Partner",
-    "title": "Person 2 (Female, 27)",
+    "name": "Theju",
+    "title": "Theju (Female, 27)",
     "gender": "Female",
     "age": 27,
     "stats": "165 cm, 60 kg",
     "bio": "Complete beginner. Focus: Motor control, bodyweight progressions (incline push-ups, dead hangs, box squats), 2s eccentric tempo.",
-    "avatarEmoji": "P",
+    "avatarEmoji": "T",
     "themeColor": "#e11d48",
     "accentGradient": "linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)",
     "glowColor": "rgba(225, 29, 72, 0.22)"
