@@ -155,6 +155,55 @@ export class StorageService {
   }
 
   /**
+   * Hydrate workout log directly from SQLite (Local or Cloudflare D1)
+   */
+  static async fetchRemoteDayLog(
+    profileId: string,
+    dateStr: string,
+    dayKey: string
+  ): Promise<WorkoutDayLog | null> {
+    if (typeof window === 'undefined') return null;
+
+    try {
+      const res = await fetch(`/api/sync?profileId=${encodeURIComponent(profileId)}&dateStr=${encodeURIComponent(dateStr)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.sets) || data.sets.length === 0) {
+        return null;
+      }
+
+      // Merge saved sets from SQLite into dayLog
+      const baseLog = this.getDayLog(profileId, dateStr, dayKey);
+      data.sets.forEach((s: any) => {
+        const exId = s.exerciseId || s.exercise_id;
+        const setNum = s.setNumber || s.set_number;
+        const exProgress = baseLog.exercisesProgress[exId];
+        if (exProgress && setNum && exProgress.sets[setNum - 1]) {
+          const targetSet = exProgress.sets[setNum - 1];
+          const weight = s.weightKg ?? s.weight_kg;
+          if (weight !== null && weight !== undefined) {
+            targetSet.weightKg = weight;
+          }
+          const reps = s.repsCompleted ?? s.reps_completed;
+          if (reps) {
+            targetSet.repsCompleted = reps;
+          }
+          const rpe = s.rpeAchieved ?? s.rpe_achieved;
+          if (rpe) {
+            targetSet.rpeAchieved = rpe;
+          }
+          targetSet.isCompleted = Boolean(s.isCompleted ?? s.is_completed);
+        }
+      });
+
+      this.saveDayLog(baseLog);
+      return baseLog;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Save workout day log and recalculate streaks & percentages
    */
   static saveDayLog(log: WorkoutDayLog): void {

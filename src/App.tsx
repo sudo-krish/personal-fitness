@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import confetti from 'canvas-confetti';
+import * as confettiModule from 'canvas-confetti';
+const confetti = (confettiModule as any).default ?? confettiModule;
 import { UserProfile, Exercise, WorkoutDayLog } from './types/workout';
 import { DAY_SCHEDULES, WORKOUT_PLAN_DATA } from './data/initialWorkoutPlan';
 import { StorageService } from './services/storageService';
@@ -55,6 +56,17 @@ export const App: React.FC = () => {
       );
       setDayLogs((prev) => ({ ...prev, [logKey]: loaded }));
     }
+
+    // Hydrate from SQLite (Local Miniflare or Cloudflare D1)
+    StorageService.fetchRemoteDayLog(
+      activeProfileId,
+      todayDateStr,
+      selectedDayKey
+    ).then((remoteLog) => {
+      if (remoteLog) {
+        setDayLogs((prev) => ({ ...prev, [logKey]: remoteLog }));
+      }
+    });
   }, [activeProfileId, selectedDayKey, todayDateStr]);
 
   // Update root CSS custom properties when active profile changes
