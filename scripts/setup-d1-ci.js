@@ -101,6 +101,21 @@ async function setupDatabase() {
     console.error('[CI-D1] Error applying migrations:', err.stderr || err.message);
     process.exit(1);
   }
+
+  // 5. Ensure Cloudflare Pages project exists before deploying
+  const PAGES_PROJECT = 'personal-fitness-tracker';
+  console.log(`[CI-Pages] Ensuring Cloudflare Pages project "${PAGES_PROJECT}" exists...`);
+  try {
+    const createPagesOut = run(`npx wrangler pages project create ${PAGES_PROJECT} --production-branch main`);
+    console.log(`[CI-Pages] Pages project created successfully:\n`, createPagesOut);
+  } catch (err) {
+    const errMsg = err.stderr || err.stdout || err.message;
+    if (errMsg.includes('already exists') || errMsg.includes('duplicate')) {
+      console.log(`[CI-Pages] Pages project "${PAGES_PROJECT}" already exists.`);
+    } else {
+      console.log(`[CI-Pages] Note during Pages project verification:`, errMsg);
+    }
+  }
 }
 
 setupDatabase().catch((e) => {
