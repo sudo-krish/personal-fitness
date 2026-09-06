@@ -5,6 +5,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 
 const DB_NAME = 'fitness-db';
+const UUID_REGEX = /([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
 
 function run(cmd, env = {}) {
   return execSync(cmd, {
@@ -16,34 +17,68 @@ function run(cmd, env = {}) {
 
 async function setupDatabase() {
   console.log(`[CI-D1] Checking if Cloudflare D1 database "${DB_NAME}" exists...`);
-  
-  let dbList = [];
+
+  let dbId = '';
+
+  // 1. Try to find existing database via wrangler d1 list
   try {
     const listOutput = run('npx wrangler d1 list --json');
-    dbList = JSON.parse(listOutput);
-  } catch (err) {
-    console.error('[CI-D1] Warning: Failed to list D1 databases. Error:', err.message);
+    const dbList = JSON.parse(listOutput);
+    const db = dbList.find((item) => item.name === DB_NAME);
+    dbId = db?.uuid || db?.id || '';
+  } catch {
+    // Fallback: parse plain text output if --json is unavailable
+    try {
+      const textOutput = run('npx wrangler d1 list');
+      const lines = textOutput.split('\n');
+      for (const line of lines) {
+        if (line.includes(DB_NAME)) {
+          const match = line.match(UUID_REGEX);
+          if (match) {
+            dbId = match[1];
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.log('[CI-D1] Info: could not list existing databases, proceeding to create check:', e.message);
+    }
   }
 
-  let db = dbList.find((item) => item.name === DB_NAME);
-  let dbId = db?.uuid || db?.id || '';
-
+  // 2. Create database if not found
   if (!dbId) {
-    console.log(`[CI-D1] Database "${DB_NAME}" does not exist. Creating now...`);
+    console.log(`[CI-D1] Database "${DB_NAME}" not found. Creating now...`);
     try {
-      const createOutput = run(`npx wrangler d1 create ${DB_NAME} --json`);
-      const createRes = JSON.parse(createOutput);
-      dbId = createRes.database_id || createRes.uuid || createRes.id || '';
+      // NOTE: wrangler d1 create does not support --json
+      const createOutput = run(`npx wrangler d1 create ${DB_NAME}`);
+      console.log('[CI-D1] Create command output:\n', createOutput);
+
+      const tomlMatch = createOutput.match(/database_id\s*=\s*"([0-9a-fA-F-]+)"/i);
+      const uuidMatch = createOutput.match(UUID_REGEX);
+      dbId = tomlMatch ? tomlMatch[1] : uuidMatch ? uuidMatch[1] : '';
+
+      if (!dbId) {
+        throw new Error('Could not parse database_id from wrangler d1 create output');
+      }
       console.log(`[CI-D1] Database "${DB_NAME}" successfully created with ID: ${dbId}`);
     } catch (err) {
-      console.error('[CI-D1] Failed to create D1 database:', err.stderr || err.message);
-      process.exit(1);
+      // If error indicates database already exists, try to get its id
+      const errMsg = err.stderr || err.stdout || err.message;
+      console.log('[CI-D1] Create attempt response:', errMsg);
+      const uuidMatch = errMsg.match(UUID_REGEX);
+      if (uuidMatch) {
+        dbId = uuidMatch[1];
+        console.log(`[CI-D1] Recovered database ID: ${dbId}`);
+      } else {
+        console.error('[CI-D1] Fatal: Failed to create or identify D1 database.');
+        process.exit(1);
+      }
     }
   } else {
     console.log(`[CI-D1] Found existing database "${DB_NAME}" with ID: ${dbId}`);
   }
 
-  // Update wrangler.toml with the resolved database_id
+  // 3. Update wrangler.toml with the resolved database_id
   const wranglerPath = 'wrangler.toml';
   if (fs.existsSync(wranglerPath)) {
     let wranglerContent = fs.readFileSync(wranglerPath, 'utf8');
@@ -55,7 +90,7 @@ async function setupDatabase() {
     console.log(`[CI-D1] Updated wrangler.toml with database_id: ${dbId}`);
   }
 
-  // Apply migrations automatically
+  // 4. Apply migrations automatically
   console.log('[CI-D1] Applying pending D1 schema migrations...');
   try {
     const migrateCmd = `echo "y" | npx wrangler d1 migrations apply ${DB_NAME} --remote`;
