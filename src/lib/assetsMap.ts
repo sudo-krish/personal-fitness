@@ -77,13 +77,15 @@ export function getEquipmentInfo(exerciseName: string): { icon: React.ReactNode;
   return { icon: React.createElement(User, { style: { width: 14, height: 14 } }), name: 'Bodyweight' };
 }
 
-// Generated cover banner images
+// High-resolution day cover banner images
 export function getSplitCoverPath(dayKey: string): string {
   const k = (dayKey || '').toLowerCase();
   if (k === 'monday' || k.includes('push')) return '/assets/covers/push-cover.jpg';
   if (k === 'tuesday' || k.includes('pull')) return '/assets/covers/pull-cover.jpg';
+  if (k === 'wednesday' || k.includes('rest') || k.includes('recovery')) return '/assets/covers/rest-cover.jpg';
   if (k === 'thursday' || k.includes('leg')) return '/assets/covers/leg-cover.jpg';
-  if (k === 'friday') return '/assets/covers/push-cover.jpg';
-  if (k === 'saturday') return '/assets/covers/pull-cover.jpg';
-  return '/assets/covers/leg-cover.jpg';
+  if (k === 'friday' || k.includes('upper')) return '/assets/covers/upper-cover.jpg';
+  if (k === 'saturday' || k.includes('lower')) return '/assets/covers/lower-cover.jpg';
+  if (k === 'sunday') return '/assets/covers/rest-cover.jpg';
+  return '/assets/covers/push-cover.jpg';
 }

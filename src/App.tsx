@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 
 import { DAY_SCHEDULES, WORKOUT_PLAN_DATA } from './data/initialWorkoutPlan';
@@ -8,6 +8,7 @@ import { Exercise, WorkoutDayLog, SetRecord } from './types/workout';
 import { getSplitCoverPath } from './lib/assetsMap';
 import { audio } from './lib/audio';
 import { haptics } from './lib/haptics';
+import { useRestTimer } from './hooks/useRestTimer';
 
 // Mobile-First Components
 import { TopAppBar } from './components/mobile/TopAppBar';
@@ -63,10 +64,14 @@ export const App: React.FC = () => {
     title: '',
   });
 
-  // Rest Timer State
-  const [restSecondsRemaining, setRestSecondsRemaining] = useState<number>(0);
-  const [isRestTimerRunning, setIsRestTimerRunning] = useState<boolean>(false);
-  const restTimerRef = useRef<number | null>(null);
+  // Rest Timer State & Controls (decoupled via useRestTimer hook)
+  const {
+    restSecondsRemaining,
+    isRestTimerRunning,
+    startRestTimer: handleStartRestTimer,
+    adjustRestTime: handleAdjustRestTime,
+    skipRest: handleSkipRest,
+  } = useRestTimer();
 
   // Load exercises from SQLite (fitness.db)
   useEffect(() => {
@@ -100,46 +105,6 @@ export const App: React.FC = () => {
         });
     });
   }, [selectedDayKey, todayDateStr]);
-
-  // Rest Timer Countdown Interval
-  useEffect(() => {
-    if (isRestTimerRunning && restSecondsRemaining > 0) {
-      restTimerRef.current = window.setInterval(() => {
-        setRestSecondsRemaining((prev) => {
-          if (prev <= 1) {
-            setIsRestTimerRunning(false);
-            if (restTimerRef.current) clearInterval(restTimerRef.current);
-            audio.playRestComplete();
-            haptics.alarm();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (restTimerRef.current) clearInterval(restTimerRef.current);
-    }
-
-    return () => {
-      if (restTimerRef.current) clearInterval(restTimerRef.current);
-    };
-  }, [isRestTimerRunning, restSecondsRemaining]);
-
-  // Rest Timer Controls
-  const handleStartRestTimer = (duration: number = 60) => {
-    setRestSecondsRemaining(duration);
-    setIsRestTimerRunning(true);
-  };
-
-  const handleAdjustRestTime = (delta: number) => {
-    setRestSecondsRemaining((prev) => Math.max(0, prev + delta));
-  };
-
-  const handleSkipRest = () => {
-    setIsRestTimerRunning(false);
-    setRestSecondsRemaining(0);
-    haptics.tap();
-  };
 
   // Toggle Profile (Krish ⇄ Theju)
   const handleToggleProfile = () => {

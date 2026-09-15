@@ -4,7 +4,6 @@
 import { drizzle } from 'drizzle-orm/d1';
 import { sql } from 'drizzle-orm';
 import * as schema from '../../../src/db/schema';
-import { ensureDbReady } from '../_bootstrap';
 
 interface Env {
   DB?: any;
@@ -30,7 +29,6 @@ export const onRequestGet = async (context: { env: Env }) => {
   }
 
   try {
-    await ensureDbReady(env.DB);
     const db = drizzle(env.DB, { schema });
     const [exCount, logCount] = await Promise.all([
       db.select({ count: sql<number>`count(*)` }).from(schema.exercises),

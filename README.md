@@ -119,18 +119,19 @@ npm run db:migrate:remote
 ## 📂 Project Structure
 
 ```
+├── docs/ui/                  # Comprehensive UI architecture & design documentation
 ├── functions/api/            # Cloudflare Pages Functions (Serverless Edge APIs)
 │   ├── exercises.ts          # Exercise listing & creation
 │   ├── exercises/[id].ts     # Exercise updates & deletion
 │   ├── exercises/reset.ts    # Workout plan reset to templates
 │   ├── sync.ts               # Working set logs & streaks sync
-│   ├── init.ts               # Schema bootstrap
 │   └── db/status.ts          # D1 SQLite connectivity & health
 ├── migrations/               # D1 SQL migration files
 ├── src/
 │   ├── components/mobile/    # UI views (Pair View, List View, Plan Editor, etc.)
 │   ├── data/                 # Initial 5-day partner split templates
 │   ├── db/schema.ts          # Drizzle ORM schema definitions for D1
+│   ├── hooks/                # Custom React hooks (useRestTimer, etc.)
 │   ├── services/             # Client API and fallback storage services
 │   └── types/                # TypeScript models
 ├── public/
@@ -138,3 +139,17 @@ npm run db:migrate:remote
 │   └── assets/               # Brand logo & high-res covers
 └── wrangler.toml             # Cloudflare Pages & D1 binding configuration
 ```
+
+---
+
+## 📖 UI Documentation & Antigravity Skills
+
+- **[UI Architecture Overview](docs/ui/README.md)**: Mobile-first architecture, component trees, and navigation hierarchy.
+- **[Porcelain & Slate Design System](docs/ui/design-system.md)**: Color tokens, partner styling (Krish Azure vs Theju Rose), liquid glass specular reflections, and safe-area guidelines.
+- **[Component Catalog](docs/ui/components.md)**: Deep dive into `PairWorkoutView`, `FullWorkoutListView`, `PlanEditorView`, and navigation elements.
+- **[State & Data Flow](docs/ui/state-and-data-flow.md)**: Dual offline localStorage and Cloudflare D1 edge sync, audio and haptics pipelines.
+- **[Antigravity Skills](.agent/skills/)**:
+  - **[`work-packages`](.agent/skills/work-packages/SKILL.md)**: Reusable, project-agnostic task decomposition, technical inference dialogues, and mandatory user verification protocol.
+  - **[`ui-ux-pro-max`](.agent/skills/ui-ux-pro-max/SKILL.md)**: UI/UX design intelligence for multi-stack web and mobile apps.
+  - **[`animejs-animation`](.agent/skills/animejs-animation/SKILL.md)**: Advanced JavaScript animation techniques.
+  - **[`seo`](.agent/skills/seo/SKILL.md)**: Search engine optimization strategies.

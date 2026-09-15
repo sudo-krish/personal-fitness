@@ -5,7 +5,6 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq, and } from 'drizzle-orm';
 import * as schema from '../../../src/db/schema';
 import { WORKOUT_PLAN_DATA } from '../../../src/data/initialWorkoutPlan';
-import { ensureDbReady } from '../_bootstrap';
 
 interface Env {
   DB?: any;
@@ -13,10 +12,6 @@ interface Env {
 
 export const onRequestPost = async (context: { request: Request; env: Env }) => {
   const { request, env } = context;
-
-  if (env.DB) {
-    await ensureDbReady(env.DB);
-  }
 
   if (!env.DB) {
     return new Response(

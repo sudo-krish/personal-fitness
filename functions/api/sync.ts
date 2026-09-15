@@ -4,7 +4,6 @@
 import { drizzle } from 'drizzle-orm/d1';
 import { eq, and, sql } from 'drizzle-orm';
 import * as schema from '../../src/db/schema';
-import { ensureDbReady } from './_bootstrap';
 
 interface Env {
   DB?: any;
@@ -53,7 +52,6 @@ export const onRequestGet = async (context: { request: Request; env: Env }) => {
   }
 
   try {
-    await ensureDbReady(env.DB);
     const db = drizzle(env.DB, { schema });
 
     const [setsResult, streakResult] = await Promise.all([
@@ -114,7 +112,6 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
   }
 
   try {
-    await ensureDbReady(env.DB);
     const payload: SyncPayload = await request.json();
     const { profileId, dateStr, dayKey, isWorkoutFinished, sets } = payload;
 

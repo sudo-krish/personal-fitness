@@ -4,7 +4,6 @@
 import { drizzle } from 'drizzle-orm/d1';
 import { eq } from 'drizzle-orm';
 import * as schema from '../../../src/db/schema';
-import { ensureDbReady } from '../_bootstrap';
 
 interface Env {
   DB?: any;
@@ -17,10 +16,6 @@ export const onRequestPut = async (context: {
 }) => {
   const { params, request, env } = context;
   const id = params.id;
-
-  if (env.DB) {
-    await ensureDbReady(env.DB);
-  }
 
   if (!env.DB) {
     return new Response(
@@ -64,10 +59,6 @@ export const onRequestDelete = async (context: {
 }) => {
   const { params, env } = context;
   const id = params.id;
-
-  if (env.DB) {
-    await ensureDbReady(env.DB);
-  }
 
   if (!env.DB) {
     return new Response(

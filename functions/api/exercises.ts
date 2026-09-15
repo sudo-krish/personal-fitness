@@ -5,7 +5,6 @@ import { drizzle } from 'drizzle-orm/d1';
 import { eq, and, asc } from 'drizzle-orm';
 import * as schema from '../../src/db/schema';
 import { WORKOUT_PLAN_DATA } from '../../src/data/initialWorkoutPlan';
-import { ensureDbReady } from './_bootstrap';
 
 interface Env {
   DB?: any;
@@ -16,11 +15,6 @@ export const onRequestGet = async (context: { request: Request; env: Env }) => {
   const url = new URL(request.url);
   const profileId = url.searchParams.get('profileId') || url.searchParams.get('profile');
   const dayKey = url.searchParams.get('dayKey') || url.searchParams.get('day');
-
-  // Ensure tables and seed data exist in D1
-  if (env.DB) {
-    await ensureDbReady(env.DB);
-  }
 
   // Template fallback helper
   const getTemplateList = () => {
@@ -122,10 +116,6 @@ export const onRequestGet = async (context: { request: Request; env: Env }) => {
 
 export const onRequestPost = async (context: { request: Request; env: Env }) => {
   const { request, env } = context;
-
-  if (env.DB) {
-    await ensureDbReady(env.DB);
-  }
 
   if (!env.DB) {
     return new Response(
