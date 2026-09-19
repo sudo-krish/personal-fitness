@@ -1,0 +1,22 @@
+# Dependencies & Submodules
+node_modules/
+.makelib/
+
+# Build & Output
+dist/
+dist-ssr/
+build/
+out/
+lib/
+.wrangler/
+.mf/
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+
+# Cache & Local DBs
+.cache/
+.turbo/
+*.tsbuildinfo
+*.db*

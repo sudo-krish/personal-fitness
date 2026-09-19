@@ -21,7 +21,7 @@ export function useRestTimer(): UseRestTimerReturn {
   useEffect(() => {
     if (isRestTimerRunning && restSecondsRemaining > 0) {
       restTimerRef.current = window.setInterval(() => {
-        setRestSecondsRemaining((prev) => {
+        setRestSecondsRemaining(prev => {
           if (prev <= 1) {
             setIsRestTimerRunning(false);
             if (restTimerRef.current) clearInterval(restTimerRef.current);
@@ -47,7 +47,7 @@ export function useRestTimer(): UseRestTimerReturn {
   }, []);
 
   const adjustRestTime = useCallback((delta: number) => {
-    setRestSecondsRemaining((prev) => Math.max(0, prev + delta));
+    setRestSecondsRemaining(prev => Math.max(0, prev + delta));
   }, []);
 
   const skipRest = useCallback(() => {

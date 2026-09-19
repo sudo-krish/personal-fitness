@@ -412,7 +412,7 @@ export const PlanEditorView: React.FC<PlanEditorViewProps> = ({
                 transition: 'all 0.15s ease',
               }}
             >
-              {d.shortName} ({d.splitTitle.split('(')[0].trim()})
+              {d.shortName} ({d.splitTitle.split('(')[0]?.trim() ?? ''})
             </button>
           );
         })}

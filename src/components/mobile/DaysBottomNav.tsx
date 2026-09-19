@@ -22,7 +22,16 @@ export function DaysBottomNav({
   activeProfile,
   onOpenExerciseList,
 }: DaysBottomNavProps) {
-  const selectedSchedule = schedules.find((s) => s.key === selectedDayKey) || schedules[0];
+  const fallbackSchedule: DaySchedule = schedules[0] ?? {
+    key: 'monday',
+    name: 'Monday',
+    splitTitle: 'Push (Chest, Shoulders, Triceps)',
+    shortName: 'Mon',
+    isRest: false,
+    focusDescription: '',
+  };
+  const selectedSchedule: DaySchedule =
+    schedules.find((s) => s.key === selectedDayKey) ?? fallbackSchedule;
   const isSelectedCompleted = dayCompletionStatus[selectedDayKey] || false;
   const isViewingToday = selectedDayKey === todayKey;
 

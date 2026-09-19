@@ -4,7 +4,7 @@ import confetti from 'canvas-confetti';
 import { DAY_SCHEDULES, WORKOUT_PLAN_DATA } from './data/initialWorkoutPlan';
 import { StorageService } from './services/storageService';
 import { PlanService } from './services/planService';
-import { Exercise, WorkoutDayLog, SetRecord } from './types/workout';
+import { Exercise, WorkoutDayLog, SetRecord, DaySchedule } from './types/workout';
 import { getSplitCoverPath } from './lib/assetsMap';
 import { audio } from './lib/audio';
 import { haptics } from './lib/haptics';
@@ -115,7 +115,16 @@ export const App: React.FC = () => {
   };
 
   // Current Schedule & Exercises for both partners
-  const currentSchedule = DAY_SCHEDULES.find((d) => d.key === selectedDayKey) || DAY_SCHEDULES[0];
+  const fallbackSchedule: DaySchedule = DAY_SCHEDULES[0] ?? {
+    key: 'monday',
+    name: 'Monday',
+    splitTitle: 'Push (Chest, Shoulders, Triceps)',
+    shortName: 'Mon',
+    isRest: false,
+    focusDescription: 'Chest & shoulder pressing, tricep extensions with supersets.',
+  };
+  const currentSchedule: DaySchedule =
+    DAY_SCHEDULES.find((d) => d.key === selectedDayKey) ?? fallbackSchedule;
   const krishExercises: Exercise[] =
     customKrishExercises || WORKOUT_PLAN_DATA['person_1']?.[selectedDayKey] || [];
   const thejuExercises: Exercise[] =
@@ -138,30 +147,29 @@ export const App: React.FC = () => {
     Math.max(0, currentExercises.length - 1)
   );
 
-  // Update Set in SQLite and state (for either person_1 or person_2)
+  // Handle set update
   const handleUpdateSet = (
     profileId: 'person_1' | 'person_2',
     exerciseId: string,
     setNumber: number,
     updates: Partial<SetRecord>
   ) => {
-    const targetExercises = profileId === 'person_1' ? krishExercises : thejuExercises;
-    const targetEx = targetExercises.find((e) => e.id === exerciseId);
-    if (!targetEx) return;
+    const isTargetKrish = profileId === 'person_1';
+    const targetLog = isTargetKrish ? krishDayLog : thejuDayLog;
+    const targetExercises = isTargetKrish ? krishExercises : thejuExercises;
 
-    const logKey = `${profileId}_${selectedDayKey}`;
-    const targetLog: WorkoutDayLog =
-      dayLogs[logKey] || StorageService.getDayLog(profileId, todayDateStr, selectedDayKey);
-
-    const exProgress = targetLog?.exercisesProgress?.[exerciseId] || {
+    const exProgress = targetLog?.exercisesProgress[exerciseId] || {
       exerciseId,
       sets: [],
       isFullyCompleted: false,
     };
 
-    const targetSetsCount = targetEx.targetSets || 3;
+    const sets = [...exProgress.sets];
 
-    let sets = [...(exProgress.sets || [])];
+    // Ensure we have enough sets up to the target
+    const currentEx = targetExercises.find((e) => e.id === exerciseId);
+    const targetSetsCount = currentEx ? currentEx.targetSets : setNumber;
+
     while (sets.length < targetSetsCount) {
       sets.push({
         setNumber: sets.length + 1,
@@ -173,12 +181,18 @@ export const App: React.FC = () => {
     }
 
     const setIdx = sets.findIndex((s) => s.setNumber === setNumber);
-    if (setIdx !== -1) {
-      sets[setIdx] = { ...sets[setIdx], ...updates };
+    const currentSet = sets[setIdx];
+    if (setIdx !== -1 && currentSet) {
+      sets[setIdx] = {
+        ...currentSet,
+        ...updates,
+        setNumber: updates.setNumber ?? currentSet.setNumber,
+      };
     }
 
     const isFullyCompleted = sets.length > 0 && sets.every((s) => s.isCompleted);
 
+    const logKey = `${profileId}_${selectedDayKey}`;
     const updatedLog: WorkoutDayLog = {
       ...targetLog,
       exercisesProgress: {

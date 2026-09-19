@@ -5,7 +5,9 @@ export const haptics = {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate(12);
-      } catch {}
+      } catch {
+        // Fallback gracefully if vibration is disabled or unsupported
+      }
     }
   },
 
@@ -14,7 +16,9 @@ export const haptics = {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate(35);
-      } catch {}
+      } catch {
+        // Fallback gracefully if vibration is disabled or unsupported
+      }
     }
   },
 
@@ -23,7 +27,9 @@ export const haptics = {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([60, 40, 80]);
-      } catch {}
+      } catch {
+        // Fallback gracefully if vibration is disabled or unsupported
+      }
     }
   },
 
@@ -32,7 +38,9 @@ export const haptics = {
     if (typeof window !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([50, 30, 50, 30, 100]);
-      } catch {}
+      } catch {
+        // Fallback gracefully if vibration is disabled or unsupported
+      }
     }
-  }
+  },
 };
