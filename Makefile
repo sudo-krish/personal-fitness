@@ -57,13 +57,18 @@ update-makelib: ## Update makelib submodule to latest remote revision
 # Include makelib core library
 -include $(MAKELIB_DIR)/core.mk
 
-# If makelib is not yet initialized and user runs another target, guide them
+# If makelib is not yet initialized and user runs another target, auto-initialize
 ifeq ($(wildcard $(MAKELIB_DIR)/core.mk),)
 .DEFAULT_GOAL := help-uninitialized
 
 help-uninitialized:
 	@echo "makelib-node is not initialized in '$(MAKELIB_DIR)'."
 	@echo "Run 'make init' to automatically add the submodule and configure the toolchain."
+
+%:
+	@echo "makelib-node is not initialized in '$(MAKELIB_DIR)'. Auto-initializing..."
+	@$(MAKE) init
+	@$(MAKE) $@
 endif
 
 # ------------------------------------------------------------------------------
