@@ -93,7 +93,7 @@ db-setup: ## Provision Cloudflare D1 database and apply remote migrations
 	@echo "Provisioning D1 database and applying remote migrations..."
 	@node scripts/setup-d1-ci.js
 
-deploy: build db-setup ## Build production assets and deploy to Cloudflare Pages
+deploy: build ## Build production assets and deploy to Cloudflare Pages
 	@echo "Deploying production bundle to Cloudflare Pages ($(PROJECT_NAME))..."
 	@npx wrangler pages deploy $(DIST_DIR) --project-name=$(PROJECT_NAME)
 
