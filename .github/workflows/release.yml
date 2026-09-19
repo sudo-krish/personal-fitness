@@ -130,3 +130,15 @@ jobs:
           else
             echo "NPM_TOKEN not set or not a publishable package; skipping npm publish."
           fi
+
+      - name: Deploy to Cloudflare Pages (Wrangler)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+            echo "Deploying application to Cloudflare Pages..."
+            make deploy
+          else
+            echo "CLOUDFLARE_API_TOKEN secret not configured; skipping Cloudflare Pages deployment."
+          fi
