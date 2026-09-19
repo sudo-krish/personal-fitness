@@ -4,6 +4,7 @@ import {
   UserStats,
   ExerciseProgress,
   SetRecord,
+  Exercise,
 } from '../types/workout';
 import {
   DEFAULT_PROFILES,
@@ -66,7 +67,7 @@ export class StorageService {
   static getActiveProfileId(): string {
     const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_PROFILE_ID);
     if (saved) return saved;
-    return DEFAULT_PROFILES[0].id;
+    return DEFAULT_PROFILES[0]?.id ?? 'krish';
   }
 
   /**
@@ -100,7 +101,7 @@ export class StorageService {
       'friday',
       'saturday',
     ];
-    return days[new Date().getDay()];
+    return days[new Date().getDay()] ?? 'monday';
   }
 
   /**
@@ -118,7 +119,13 @@ export class StorageService {
     }
 
     // Initialize clean log based on the plan
-    const dayExercises = WORKOUT_PLAN_DATA[profileId]?.[dayKey] || [];
+    const profilePlans = Object.prototype.hasOwnProperty.call(WORKOUT_PLAN_DATA, profileId)
+      ? (Reflect.get(WORKOUT_PLAN_DATA, profileId) as Record<string, Exercise[]> | undefined)
+      : undefined;
+    const dayExercises =
+      profilePlans && Object.prototype.hasOwnProperty.call(profilePlans, dayKey)
+        ? (Reflect.get(profilePlans, dayKey) as Exercise[] | undefined) ?? []
+        : [];
     const initialProgress: Record<string, ExerciseProgress> = {};
 
     dayExercises.forEach((ex) => {
@@ -174,25 +181,48 @@ export class StorageService {
 
       // Merge saved sets from SQLite into dayLog
       const baseLog = this.getDayLog(profileId, dateStr, dayKey);
-      data.sets.forEach((s: any) => {
-        const exId = s.exerciseId || s.exercise_id;
-        const setNum = s.setNumber || s.set_number;
-        const exProgress = baseLog.exercisesProgress[exId];
-        if (exProgress && setNum && exProgress.sets[setNum - 1]) {
-          const targetSet = exProgress.sets[setNum - 1];
-          const weight = s.weightKg ?? s.weight_kg;
-          if (weight !== null && weight !== undefined) {
-            targetSet.weightKg = weight;
-          }
-          const reps = s.repsCompleted ?? s.reps_completed;
-          if (reps) {
-            targetSet.repsCompleted = reps;
-          }
-          const rpe = s.rpeAchieved ?? s.rpe_achieved;
-          if (rpe) {
-            targetSet.rpeAchieved = rpe;
-          }
-          targetSet.isCompleted = Boolean(s.isCompleted ?? s.is_completed);
+      type RemoteSet = {
+        exerciseId?: string;
+        exercise_id?: string;
+        setNumber?: number;
+        set_number?: number;
+        weightKg?: string | number | null;
+        weight_kg?: string | number | null;
+        repsCompleted?: string | null;
+        reps_completed?: string | null;
+        rpeAchieved?: string | null;
+        rpe_achieved?: string | null;
+        isCompleted?: boolean | number;
+        is_completed?: boolean | number;
+      };
+
+      const applyRemoteValues = (targetSet: SetRecord, s: RemoteSet): void => {
+        const weight = s.weightKg ?? s.weight_kg;
+        if (weight !== null && weight !== undefined) {
+          targetSet.weightKg = String(weight);
+        }
+        const reps = s.repsCompleted ?? s.reps_completed;
+        if (reps) {
+          targetSet.repsCompleted = String(reps);
+        }
+        const rpe = s.rpeAchieved ?? s.rpe_achieved;
+        if (rpe) {
+          targetSet.rpeAchieved = String(rpe);
+        }
+        targetSet.isCompleted = Boolean(s.isCompleted ?? s.is_completed);
+      };
+
+      data.sets.forEach((s: RemoteSet) => {
+        const exId = s.exerciseId ?? s.exercise_id;
+        const setNum = s.setNumber ?? s.set_number;
+        if (!exId || !setNum) return;
+
+        const progress = Object.prototype.hasOwnProperty.call(baseLog.exercisesProgress, exId)
+          ? (Reflect.get(baseLog.exercisesProgress, exId) as ExerciseProgress | undefined)
+          : undefined;
+        const targetSet = progress?.sets[setNum - 1];
+        if (targetSet) {
+          applyRemoteValues(targetSet, s);
         }
       });
 

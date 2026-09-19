@@ -1,44 +1,34 @@
+# ==============================================================================
+# .gitignore — Personal Fitness Tracker (NO-OVERRIDE)
+# ==============================================================================
+
 # Dependencies
 node_modules/
 .pnp
 .pnp.js
 
-# Production build output
+# Build Outputs
 dist/
 dist-ssr/
+build/
+out/
+lib/
 *.local
 
 # Cloudflare Wrangler state & logs
 .wrangler/
 .mf/
 
-# Environment variables
-.env
-.env.local
-.env.production.local
-.env.development.local
+# Testing & Code Coverage
+coverage/
+.nyc_output/
+*.lcov
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Editor & OS files
-.DS_Store
-Thumbs.db
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-.vscode/*
-!.vscode/extensions.json
-.idea/
-
-# Agent scratch & temporary files
-.agent/
-.system_generated/
+# Cache & Build Info
+.cache/
+.turbo/
+.eslintcache
+*.tsbuildinfo
 
 # Local SQLite databases & cache
 *.db
@@ -48,6 +38,41 @@ Thumbs.db
 fitness.db
 fitness.db.json
 
-# Backend API files not needed for Cloudflare (Cloudflare Pages Functions in functions/ are used instead)
-server/
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.development.local
+*.pem
+*.key
 
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# IDE & Editor Files
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Agent scratch & temporary files
+.agent/
+.system_generated/
+*.tmp
+*.temp
+tmp/
+
+
+# Backend API scratch files (Cloudflare Pages Functions in functions/ are used)
+server/

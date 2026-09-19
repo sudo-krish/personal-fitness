@@ -1,6 +1,36 @@
 import { Exercise } from '../types/workout';
 import { WORKOUT_PLAN_DATA } from '../data/initialWorkoutPlan';
 
+function toSafeString(val: unknown, fallback = ''): string {
+  if (typeof val === 'string' && val.length > 0) {
+    return val;
+  }
+  if (val !== undefined && val !== null && typeof val !== 'object') {
+    return String(val);
+  }
+  return fallback;
+}
+
+function toSafeNumber(val: unknown, fallback = 0): number {
+  const n = Number(val);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function mapExerciseDto(e: Record<string, unknown>): Exercise {
+  return {
+    id: toSafeString(e.id),
+    day: toSafeString(e.dayKey),
+    pair: toSafeString(e.pairTag),
+    name: toSafeString(e.name),
+    muscle: toSafeString(e.muscle),
+    targetSets: toSafeNumber(e.targetSets),
+    targetReps: toSafeString(e.targetReps),
+    targetRpe: toSafeString(e.targetRpe, '7-8'),
+    notes: toSafeString(e.notes),
+    videoUrl: toSafeString(e.videoUrl),
+  };
+}
+
 export class PlanService {
   /**
    * Fetch exercises from SQLite API (/api/exercises)
@@ -14,18 +44,7 @@ export class PlanService {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.exercises) && data.exercises.length > 0) {
-          return data.exercises.map((e: any) => ({
-            id: e.id,
-            day: e.dayKey,
-            pair: e.pairTag,
-            name: e.name,
-            muscle: e.muscle,
-            targetSets: e.targetSets,
-            targetReps: e.targetReps,
-            targetRpe: e.targetRpe || '7-8',
-            notes: e.notes || '',
-            videoUrl: e.videoUrl || '',
-          }));
+          return data.exercises.map(mapExerciseDto);
         }
       }
     } catch (e) {
@@ -33,7 +52,14 @@ export class PlanService {
     }
 
     // Fallback to initial plan data
-    return WORKOUT_PLAN_DATA[profileId]?.[dayKey] || [];
+    const profilePlans = Object.prototype.hasOwnProperty.call(WORKOUT_PLAN_DATA, profileId)
+      ? (Reflect.get(WORKOUT_PLAN_DATA, profileId) as Record<string, Exercise[]> | undefined)
+      : undefined;
+    if (profilePlans && Object.prototype.hasOwnProperty.call(profilePlans, dayKey)) {
+      const plan = Reflect.get(profilePlans, dayKey) as Exercise[] | undefined;
+      return Array.isArray(plan) ? plan : [];
+    }
+    return [];
   }
 
   /**
