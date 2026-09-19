@@ -6,10 +6,7 @@ import {
   SetRecord,
   Exercise,
 } from '../types/workout';
-import {
-  DEFAULT_PROFILES,
-  WORKOUT_PLAN_DATA,
-} from '../data/initialWorkoutPlan';
+import { DEFAULT_PROFILES, WORKOUT_PLAN_DATA } from '../data/initialWorkoutPlan';
 
 const STORAGE_KEYS = {
   ACTIVE_PROFILE_ID: 'liquid_fitness_active_profile',
@@ -28,8 +25,8 @@ export class StorageService {
       if (stored) {
         const parsed: UserProfile[] = JSON.parse(stored);
         // Ensure modern light theme colors are applied
-        const updated = parsed.map((p) => {
-          const defaultMatch = DEFAULT_PROFILES.find((d) => d.id === p.id);
+        const updated = parsed.map(p => {
+          const defaultMatch = DEFAULT_PROFILES.find(d => d.id === p.id);
           if (defaultMatch) {
             return {
               ...p,
@@ -92,15 +89,7 @@ export class StorageService {
    * Determine today's day key (monday, tuesday, etc.)
    */
   static getTodayDayKey(): string {
-    const days = [
-      'sunday',
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday',
-      'saturday',
-    ];
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     return days[new Date().getDay()] ?? 'monday';
   }
 
@@ -124,11 +113,11 @@ export class StorageService {
       : undefined;
     const dayExercises =
       profilePlans && Object.prototype.hasOwnProperty.call(profilePlans, dayKey)
-        ? (Reflect.get(profilePlans, dayKey) as Exercise[] | undefined) ?? []
+        ? ((Reflect.get(profilePlans, dayKey) as Exercise[] | undefined) ?? [])
         : [];
     const initialProgress: Record<string, ExerciseProgress> = {};
 
-    dayExercises.forEach((ex) => {
+    dayExercises.forEach(ex => {
       const sets: SetRecord[] = [];
       for (let i = 1; i <= ex.targetSets; i++) {
         sets.push({
@@ -167,12 +156,14 @@ export class StorageService {
   static async fetchRemoteDayLog(
     profileId: string,
     dateStr: string,
-    dayKey: string
+    dayKey: string,
   ): Promise<WorkoutDayLog | null> {
     if (typeof window === 'undefined') return null;
 
     try {
-      const res = await fetch(`/api/sync?profileId=${encodeURIComponent(profileId)}&dateStr=${encodeURIComponent(dateStr)}`);
+      const res = await fetch(
+        `/api/sync?profileId=${encodeURIComponent(profileId)}&dateStr=${encodeURIComponent(dateStr)}`,
+      );
       if (!res.ok) return null;
       const data = await res.json();
       if (!data.success || !Array.isArray(data.sets) || data.sets.length === 0) {
@@ -242,9 +233,9 @@ export class StorageService {
     let totalSets = 0;
     let completedSets = 0;
 
-    exercises.forEach((ex) => {
+    exercises.forEach(ex => {
       let allSetsDone = ex.sets.length > 0;
-      ex.sets.forEach((s) => {
+      ex.sets.forEach(s => {
         totalSets++;
         if (s.isCompleted) {
           completedSets++;
@@ -255,10 +246,8 @@ export class StorageService {
       ex.isFullyCompleted = allSetsDone;
     });
 
-    log.completedPercentage =
-      totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
-    log.isWorkoutFinished =
-      totalSets > 0 && completedSets === totalSets;
+    log.completedPercentage = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+    log.isWorkoutFinished = totalSets > 0 && completedSets === totalSets;
     log.updatedAt = new Date().toISOString();
 
     const storageKey = `${STORAGE_KEYS.WORKOUT_LOGS}_${log.profileId}_${log.dateStr}`;
@@ -294,8 +283,8 @@ export class StorageService {
           isCompleted: boolean;
         }[] = [];
 
-        Object.values(log.exercisesProgress).forEach((ex) => {
-          ex.sets.forEach((s) => {
+        Object.values(log.exercisesProgress).forEach(ex => {
+          ex.sets.forEach(s => {
             flattenedSets.push({
               exerciseId: ex.exerciseId,
               setNumber: s.setNumber,
@@ -363,8 +352,8 @@ export class StorageService {
 
     // Count total sets completed
     let completedSetsCount = 0;
-    Object.values(log.exercisesProgress).forEach((ex) => {
-      ex.sets.forEach((s) => {
+    Object.values(log.exercisesProgress).forEach(ex => {
+      ex.sets.forEach(s => {
         if (s.isCompleted) completedSetsCount++;
       });
     });

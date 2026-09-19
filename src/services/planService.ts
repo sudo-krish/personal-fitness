@@ -39,7 +39,7 @@ export class PlanService {
   static async getExercises(profileId: string, dayKey: string): Promise<Exercise[]> {
     try {
       const res = await fetch(
-        `/api/exercises?profileId=${encodeURIComponent(profileId)}&dayKey=${encodeURIComponent(dayKey)}`
+        `/api/exercises?profileId=${encodeURIComponent(profileId)}&dayKey=${encodeURIComponent(dayKey)}`,
       );
       if (res.ok) {
         const data = await res.json();
@@ -76,7 +76,7 @@ export class PlanService {
       targetRpe: string;
       notes: string;
       videoUrl: string;
-    }>
+    }>,
   ): Promise<boolean> {
     try {
       const res = await fetch(`/api/exercises/${encodeURIComponent(id)}`, {

@@ -4,9 +4,11 @@ import { useRestTimer } from '../src/hooks/useRestTimer';
 import { audio } from '../src/lib/audio';
 import { haptics } from '../src/lib/haptics';
 
-const internals = (React as unknown as {
-  __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE: { H: unknown };
-}).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+const internals = (
+  React as unknown as {
+    __CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE: { H: unknown };
+  }
+).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
 
 describe('useRestTimer', () => {
   const originalWindow = globalThis.window;
@@ -17,7 +19,7 @@ describe('useRestTimer', () => {
     vi.restoreAllMocks();
     mockSetInterval.mockClear();
     mockClearInterval.mockClear();
-    vi.spyOn(globalThis, 'clearInterval').mockImplementation((id) => {
+    vi.spyOn(globalThis, 'clearInterval').mockImplementation(id => {
       mockClearInterval(id);
     });
     globalThis.window = {

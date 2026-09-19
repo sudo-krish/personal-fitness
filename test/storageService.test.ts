@@ -81,7 +81,15 @@ describe('StorageService', () => {
 
     it('returns a valid day key', () => {
       const dayKey = StorageService.getTodayDayKey();
-      const validDays = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const validDays = [
+        'sunday',
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+      ];
       expect(validDays).toContain(dayKey);
     });
   });
@@ -145,7 +153,9 @@ describe('StorageService', () => {
 
     it('syncs dayLog to remote D1 with debounce', async () => {
       vi.useFakeTimers();
-      const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValue({ ok: true, json: async () => ({ success: true }) });
       globalThis.fetch = mockFetch;
       const log = StorageService.getDayLog('person_1', '2026-09-19', 'monday');
 
@@ -158,7 +168,7 @@ describe('StorageService', () => {
         '/api/sync',
         expect.objectContaining({
           method: 'POST',
-        })
+        }),
       );
       vi.useRealTimers();
     });
@@ -182,8 +192,8 @@ describe('StorageService', () => {
 
     it('updates streak and workout stats on completed workout', () => {
       const log = StorageService.getDayLog('person_1', '2026-09-19', 'monday');
-      Object.values(log.exercisesProgress).forEach((ex) => {
-        ex.sets.forEach((s) => {
+      Object.values(log.exercisesProgress).forEach(ex => {
+        ex.sets.forEach(s => {
           s.isCompleted = true;
         });
       });
@@ -217,8 +227,12 @@ describe('StorageService', () => {
     it('handles localStorage errors gracefully in getDayLog and saveProfiles', () => {
       const errorStorage = {
         ...localStorage,
-        getItem: vi.fn(() => { throw new Error('QuotaExceeded'); }),
-        setItem: vi.fn(() => { throw new Error('QuotaExceeded'); }),
+        getItem: vi.fn(() => {
+          throw new Error('QuotaExceeded');
+        }),
+        setItem: vi.fn(() => {
+          throw new Error('QuotaExceeded');
+        }),
       };
       globalThis.localStorage = errorStorage as unknown as Storage;
       expect(() => StorageService.saveProfiles([])).not.toThrow();
@@ -310,8 +324,8 @@ describe('StorageService', () => {
       localStorage.setItem('liquid_fitness_stats_person_1', JSON.stringify(initialStats));
 
       const log = StorageService.getDayLog('person_1', '2026-09-19', 'monday');
-      Object.values(log.exercisesProgress).forEach((ex) => {
-        ex.sets.forEach((s) => {
+      Object.values(log.exercisesProgress).forEach(ex => {
+        ex.sets.forEach(s => {
           s.isCompleted = true;
         });
       });
@@ -326,8 +340,12 @@ describe('StorageService', () => {
     it('handles localStorage errors when updating and retrieving stats', () => {
       const errorStorage = {
         ...localStorage,
-        getItem: vi.fn(() => { throw new Error('QuotaExceeded'); }),
-        setItem: vi.fn(() => { throw new Error('QuotaExceeded'); }),
+        getItem: vi.fn(() => {
+          throw new Error('QuotaExceeded');
+        }),
+        setItem: vi.fn(() => {
+          throw new Error('QuotaExceeded');
+        }),
       };
       globalThis.localStorage = errorStorage as unknown as Storage;
       const fallbackStats = StorageService.getUserStats('person_1');
