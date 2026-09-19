@@ -69,10 +69,7 @@ jobs:
           MIN_COVERAGE: 80
 
       - name: Compile Production Bundle
-        run: |
-          if [ -f "src/index.ts" ] || [ -f "tsup.config.ts" ]; then
-            make build
-          fi
+        run: make build
 
       - name: Calculate Next Version
         id: semver
@@ -114,30 +111,55 @@ jobs:
             --title "Release v${NEW_VERSION}" \
             --generate-notes
 
-      - name: Publish to NPM (if NPM_TOKEN configured and package is public)
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  deploy:
+    name: Deploy to Cloudflare Pages
+    needs: release
+    if: github.event.pull_request.merged == true || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
         run: |
-          if [ -n "${{ secrets.NPM_TOKEN }}" ] && [ -f "package.json" ]; then
-            IS_PRIVATE=$(node -p "Boolean(require('./package.json').private)" 2>/dev/null || echo "true")
-            if [ "$IS_PRIVATE" != "true" ]; then
-              echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-              npm publish --access public
-              echo "Package successfully published to npm registry."
-            else
-              echo "package.json is marked private; skipping npm publish."
-            fi
-          else
-            echo "NPM_TOKEN not set or not a publishable package; skipping npm publish."
+          if [ -f "package-lock.json" ]; then
+            npm ci || npm install
+          elif [ -f "package.json" ]; then
+            npm install
+          fi
+          if [ -f ".makelib/package.json" ] && [ ! -d ".makelib/node_modules" ]; then
+            npm --prefix .makelib install
           fi
 
-      - name: Deploy to Cloudflare Pages (Wrangler)
+      - name: Provision D1 Database & Run Migrations (Makefile db-setup)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           if [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
-            echo "Deploying application to Cloudflare Pages..."
+            echo "Running make db-setup..."
+            make db-setup
+          else
+            echo "CLOUDFLARE_API_TOKEN not set; skipping db-setup."
+          fi
+
+      - name: Deploy to Cloudflare Pages (Makefile deploy)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+            echo "Deploying application via make deploy..."
             make deploy
           else
             echo "CLOUDFLARE_API_TOKEN secret not configured; skipping Cloudflare Pages deployment."
