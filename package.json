@@ -11,15 +11,21 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply fitness-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply fitness-db --remote",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:truncate:remote": "node scripts/truncate-and-load-db.js --remote",
+    "db:truncate:local": "node scripts/truncate-and-load-db.js --local",
+    "db:reinit:remote": "node scripts/reinit-database.js --remote",
+    "db:reinit:local": "node scripts/reinit-database.js --local"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "canvas-confetti": "^1.9.4",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.47.0",
     "motion": "^13.4.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

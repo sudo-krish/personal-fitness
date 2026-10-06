@@ -1,0 +1,51 @@
+name: Manual Re-initialize Application
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Target D1 environment'
+        required: true
+        default: 'remote'
+        type: choice
+        options:
+          - remote
+          - local
+      confirm:
+        description: 'Type "reinit-application" to confirm complete wipe of all tables & fresh library reload'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  reinit-database:
+    name: Re-initialize Application Database
+    runs-on: ubuntu-latest
+    if: inputs.confirm == 'reinit-application'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Re-initialize Database against D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ "${{ inputs.target }}" = "remote" ]; then
+            npm run db:reinit:remote
+          else
+            npm run db:reinit:local
+          fi

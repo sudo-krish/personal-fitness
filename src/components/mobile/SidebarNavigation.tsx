@@ -1,415 +1,195 @@
-import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X,
   Dumbbell,
-  Sliders,
   Database,
   ChevronRight,
-  CheckCircle2,
   RefreshCw,
+  LogOut,
+  Sparkles,
 } from 'lucide-react';
 import { haptics } from '../../lib/haptics';
+import { AppRoute } from '../../router/routes';
+import { UserProfile } from '../../types/workout';
+import { useAuth } from '../../context/AuthContext';
+import { Avatar } from '../ui/Avatar';
 
 interface SidebarNavigationProps {
   isOpen: boolean;
   onClose: () => void;
-  activeView: 'workout' | 'plan-editor';
-  onSelectView: (view: 'workout' | 'plan-editor') => void;
-  activeProfile: 'krish' | 'theju';
-  onToggleProfile: () => void;
-  onResetPlan?: () => void;
+  activePath: AppRoute;
+  onNavigate: (path: AppRoute) => void;
+  profiles?: UserProfile[];
+  onSeedPlan?: () => void;
 }
 
-interface DbStatus {
-  connected: boolean;
-  databaseFile: string;
-  totalExercises: number;
-  totalSetLogs: number;
-}
-
-export const SidebarNavigation: React.FC<SidebarNavigationProps> = ({
+export function SidebarNavigation({
   isOpen,
   onClose,
-  activeView,
-  onSelectView,
-  activeProfile,
-  onToggleProfile,
-  onResetPlan,
-}) => {
-  const isKrish = activeProfile === 'krish';
-  const [dbStatus, setDbStatus] = useState<DbStatus | null>(null);
+  activePath,
+  onNavigate,
+  profiles,
+  onSeedPlan,
+}: SidebarNavigationProps) {
+  const { user, partner, logout, isAuthenticated } = useAuth();
+  const isPrimary = user?.isPrimary ?? true;
+  const p1 = isPrimary ? user : partner;
+  const p2 = isPrimary ? partner : user;
+  const p1Name = p1?.name || profiles?.[0]?.name || 'Partner 1';
+  const p1Emoji = p1?.avatarEmoji || profiles?.[0]?.avatarEmoji || '⚡';
+  const p2Name = p2?.name || profiles?.[1]?.name || 'Partner 2';
+  const p2Emoji = p2?.avatarEmoji || profiles?.[1]?.avatarEmoji || '✨';
 
-  useEffect(() => {
-    if (isOpen) {
-      fetch('/api/db/status')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            setDbStatus({
-              connected: data.connected,
-              databaseFile: data.databaseFile || 'fitness.db',
-              totalExercises: data.totalExercises || 30,
-              totalSetLogs: data.totalSetLogs || 0,
-            });
-          }
-        })
-        .catch(() => {
-          setDbStatus({
-            connected: true,
-            databaseFile: 'fitness.db',
-            totalExercises: 30,
-            totalSetLogs: 0,
-          });
-        });
-    }
-  }, [isOpen]);
-
-  const handleNavigate = (view: 'workout' | 'plan-editor') => {
+  const handleNavigate = (path: AppRoute) => {
     haptics.tap();
-    onSelectView(view);
+    onNavigate(path);
     onClose();
   };
+
+  const navItems = [
+    {
+      path: '/' as AppRoute,
+      label: 'Workout Tracker',
+      description: 'Synchronized superset stations',
+      icon: <Dumbbell size={18} />,
+    },
+    {
+      path: '/library' as AppRoute,
+      label: 'Exercise Catalog',
+      description: '870+ exercises & tutorials',
+      icon: <Database size={18} />,
+    },
+  ];
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 150,
-            display: 'flex',
-          }}
-        >
+        <div className="fixed inset-0 z-50 flex">
           {/* Backdrop Scrim */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: 'rgba(15, 23, 42, 0.48)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-            }}
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
           />
 
-          {/* Slide-out Sidebar Panel */}
+          {/* Slide-out Panel */}
           <motion.aside
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-            style={{
-              position: 'relative',
-              width: '82%',
-              maxWidth: '320px',
-              height: '100%',
-              backgroundColor: 'rgba(255, 255, 255, 0.94)',
-              backdropFilter: 'blur(28px)',
-              WebkitBackdropFilter: 'blur(28px)',
-              borderRight: '1px solid rgba(226, 232, 240, 0.9)',
-              boxShadow: '8px 0 32px rgba(15, 23, 42, 0.14)',
-              display: 'flex',
-              flexDirection: 'column',
-              zIndex: 1,
-            }}
+            className="relative w-4/5 max-w-xs h-full bg-white dark:bg-slate-900 border-r border-slate-200/90 dark:border-slate-800 shadow-2xl flex flex-col z-10 p-5 overflow-y-auto"
           >
-            {/* 1. Header Bar */}
-            <div
-              style={{
-                padding: '20px 18px 16px 18px',
-                borderBottom: '1px solid rgba(226, 232, 240, 0.8)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '10px',
-                    overflow: 'hidden',
-                    border: '1px solid #CBD5E1',
-                    boxShadow: '0 2px 6px rgba(15, 23, 42, 0.06)',
-                    flexShrink: 0,
-                  }}
-                >
-                  <img
-                    src="/assets/app-logo.jpg"
-                    alt="Pulse Strength"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-rose-500 flex items-center justify-center text-white">
+                  <Sparkles size={16} />
                 </div>
-                <div>
-                  <h3
-                    style={{
-                      fontFamily: 'var(--font-athletic)',
-                      fontSize: '1rem',
-                      fontWeight: 800,
-                      color: '#0F172A',
-                      margin: 0,
-                      lineHeight: 1.15,
-                    }}
-                  >
-                    PULSE PARTNER
-                  </h3>
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '0.625rem',
-                      fontWeight: 700,
-                      color: '#64748B',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    FITNESS SUITE v2.0
-                  </span>
-                </div>
+                <span className="font-extrabold text-sm tracking-tight text-slate-900 dark:text-white">
+                  Duo Fitness
+                </span>
               </div>
 
               <button
                 type="button"
                 onClick={onClose}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '9999px',
-                  border: 'none',
-                  backgroundColor: '#F1F5F9',
-                  color: '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                }}
-                title="Close menu"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                aria-label="Close sidebar"
               >
-                <X style={{ width: '16px', height: '16px' }} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* 2. Active Partner Profile Capsule */}
-            <div style={{ padding: '14px 18px 8px 18px' }}>
-              <div
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: '14px',
-                  backgroundColor: isKrish ? 'rgba(240, 249, 255, 0.7)' : 'rgba(255, 241, 242, 0.7)',
-                  border: `1px solid ${isKrish ? 'rgba(186, 230, 253, 0.8)' : 'rgba(254, 205, 211, 0.8)'}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '9999px',
-                      background: isKrish
-                        ? 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)'
-                        : 'linear-gradient(135deg, #E11D48 0%, #BE123C 100%)',
-                      color: '#FFFFFF',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      fontWeight: 800,
-                    }}
-                  >
-                    {isKrish ? 'K' : 'T'}
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 800, color: '#0F172A', display: 'block' }}>
-                      {isKrish ? 'Krish' : 'Theju'}
+            {/* Duo Training Team Card */}
+            <div className="py-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex flex-col gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                  Duo Training Team
+                </span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Avatar name={p1Name} emoji={p1Emoji} role="person_1" size="sm" />
+                    <span className="text-xs font-bold text-sky-800 dark:text-sky-300 truncate max-w-[80px]">
+                      {p1Name}
                     </span>
-                    <span style={{ fontSize: '0.6875rem', color: '#64748B' }}>
-                      {isKrish ? 'Person 1 (Intermediate)' : 'Person 2 (Beginner)'}
+                  </div>
+                  <span className="text-xs text-slate-300 dark:text-slate-600 font-bold">•</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Avatar name={p2Name} emoji={p2Emoji} role="person_2" size="sm" />
+                    <span className="text-xs font-bold text-rose-800 dark:text-rose-300 truncate max-w-[80px]">
+                      {p2Name}
                     </span>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    haptics.tap();
-                    onToggleProfile();
-                  }}
-                  style={{
-                    padding: '3px 8px',
-                    borderRadius: '8px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: '#FFFFFF',
-                    fontSize: '0.6875rem',
-                    fontWeight: 700,
-                    color: '#475569',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Switch
-                </button>
               </div>
             </div>
 
-            {/* 3. Navigation Links */}
-            <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-              <button
-                type="button"
-                onClick={() => handleNavigate('workout')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  borderRadius: '14px',
-                  border: activeView === 'workout' ? '1.5px solid var(--azure)' : '1px solid transparent',
-                  backgroundColor: activeView === 'workout' ? 'var(--azure-light)' : 'transparent',
-                  color: activeView === 'workout' ? 'var(--azure)' : '#334155',
-                  fontWeight: activeView === 'workout' ? 800 : 600,
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Dumbbell style={{ width: '18px', height: '18px' }} />
-                  <span>Workout Tracker (Pair View)</span>
-                </div>
-                <ChevronRight style={{ width: '16px', height: '16px', opacity: 0.5 }} />
-              </button>
+            {/* Navigation Links */}
+            <nav className="flex flex-col gap-1.5 py-4 flex-1">
+              {navItems.map((item) => {
+                const isActive = activePath === item.path;
+                return (
+                  <button
+                    key={item.path}
+                    type="button"
+                    onClick={() => handleNavigate(item.path)}
+                    className={`flex items-center justify-between p-3 rounded-2xl text-left transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-semibold shadow-xs'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="shrink-0">{item.icon}</span>
+                      <div>
+                        <p className="text-sm font-semibold">{item.label}</p>
+                        <p className={`text-[11px] ${isActive ? 'text-slate-300 dark:text-slate-600' : 'text-slate-400 dark:text-slate-500'}`}>
+                          {item.description}
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight size={16} className="opacity-40" />
+                  </button>
+                );
+              })}
+            </nav>
 
-              <button
-                type="button"
-                onClick={() => handleNavigate('plan-editor')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  borderRadius: '14px',
-                  border: activeView === 'plan-editor' ? '1.5px solid var(--azure)' : '1px solid transparent',
-                  backgroundColor: activeView === 'plan-editor' ? 'var(--azure-light)' : 'transparent',
-                  color: activeView === 'plan-editor' ? 'var(--azure)' : '#334155',
-                  fontWeight: activeView === 'plan-editor' ? 800 : 600,
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Sliders style={{ width: '18px', height: '18px' }} />
-                  <span>Edit Exercise Plans</span>
-                </div>
-                <ChevronRight style={{ width: '16px', height: '16px', opacity: 0.5 }} />
-              </button>
-
-              {onResetPlan && (
+            {/* Bottom Actions */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+              {onSeedPlan && (
                 <button
                   type="button"
                   onClick={() => {
-                    haptics.tap();
-                    if (window.confirm('Reset workout plans back to original 5-Day Split defaults in fitness.db?')) {
-                      onResetPlan();
-                      onClose();
-                    }
+                    onClose();
+                    onSeedPlan();
                   }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '12px 14px',
-                    borderRadius: '14px',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    color: '#64748B',
-                    fontWeight: 600,
-                    fontSize: '0.8125rem',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    marginTop: '8px',
-                  }}
+                  className="flex items-center gap-2 p-2.5 rounded-xl text-xs font-semibold text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors cursor-pointer"
                 >
-                  <RefreshCw style={{ width: '16px', height: '16px' }} />
-                  <span>Reset Split to Default</span>
+                  <RefreshCw size={15} />
+                  <span>Reload 5-Day Workout Plan</span>
                 </button>
               )}
-            </div>
 
-            {/* 4. Local SQLite Database Telemetry Card */}
-            <div
-              style={{
-                padding: '16px 18px',
-                borderTop: '1px solid rgba(226, 232, 240, 0.8)',
-                backgroundColor: 'rgba(248, 250, 252, 0.65)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: '6px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Database style={{ width: '14px', height: '14px', color: 'var(--emerald)' }} />
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '0.6875rem',
-                      fontWeight: 800,
-                      color: '#0F172A',
-                      letterSpacing: '0.04em',
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    SQLite Local DB
-                  </span>
-                </div>
-
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                    fontSize: '0.625rem',
-                    fontWeight: 800,
-                    color: 'var(--emerald)',
-                    backgroundColor: 'var(--emerald-light)',
-                    padding: '2px 6px',
-                    borderRadius: '9999px',
-                    border: '1px solid var(--emerald-border)',
+              {isAuthenticated && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    logout();
                   }}
+                  className="flex items-center gap-2 p-2.5 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
                 >
-                  <CheckCircle2 style={{ width: '10px', height: '10px' }} />
-                  <span>ONLINE</span>
-                </span>
-              </div>
-
-              <div style={{ fontSize: '0.6875rem', color: '#64748B', lineHeight: 1.4 }}>
-                <div>
-                  File: <code style={{ color: '#0F172A', fontWeight: 700 }}>fitness.db</code>
-                </div>
-                <div>
-                  Exercises: <span style={{ fontWeight: 700, color: '#0F172A' }}>{dbStatus?.totalExercises ?? 30} loaded</span>
-                </div>
-                <div style={{ fontSize: '0.625rem', color: '#94A3B8', marginTop: '4px' }}>
-                  Native SQLite & D1 Relational Engine
-                </div>
-              </div>
+                  <LogOut size={15} />
+                  <span>Sign Out</span>
+                </button>
+              )}
             </div>
           </motion.aside>
         </div>
       )}
     </AnimatePresence>
   );
-};
+}

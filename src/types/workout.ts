@@ -33,6 +33,8 @@ export interface Exercise {
   targetRpe?: string; // e.g. "7-8"
   notes?: string;
   videoUrl?: string;
+  profileId?: 'person_1' | 'person_2' | null | string;
+  images?: string[];
 }
 
 export interface SetRecord {
@@ -61,8 +63,12 @@ export interface UserProfile {
   bio: string;
   avatarEmoji: string;
   themeColor: string; // Hex color
-  accentGradient: string;
-  glowColor: string;
+  accentGradient?: string;
+  glowColor?: string;
+  username?: string;
+  isPrimary?: boolean;
+  partnerId?: string | null;
+  pairId?: string;
 }
 
 export interface DaySchedule {

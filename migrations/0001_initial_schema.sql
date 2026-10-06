@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS workout_splits (
 -- 3. Exercises
 CREATE TABLE IF NOT EXISTS exercises (
   id TEXT PRIMARY KEY,
-  profile_id TEXT NOT NULL,
+  profile_id TEXT,
   day_key TEXT NOT NULL,
   pair_tag TEXT NOT NULL,
   name TEXT NOT NULL,
@@ -70,9 +70,3 @@ CREATE TABLE IF NOT EXISTS user_streaks (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (profile_id) REFERENCES profiles(id)
 );
-
--- Default Seed Data for Profiles
-INSERT OR IGNORE INTO profiles (id, name, title, gender, age, stats, bio, avatar_emoji, theme_color)
-VALUES 
-  ('person_1', 'Krish', 'Person 1 (Male, 29)', 'Male', 29, '181 cm, 80 kg', 'Returning after a 2-year gap. Rebuild tendon strength, progressive overload, RPE 7-8 target.', '⚡', '#0284c7'),
-  ('person_2', 'Partner', 'Person 2 (Female, 27)', 'Female', 27, '165 cm, 60 kg', 'Complete beginner. Focus: Motor control, bodyweight progressions, 2s eccentric tempo.', '✨', '#e11d48');

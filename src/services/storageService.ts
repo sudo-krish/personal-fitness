@@ -3,10 +3,8 @@ import {
   WorkoutDayLog,
   UserStats,
   ExerciseProgress,
-  SetRecord,
-  Exercise,
 } from '../types/workout';
-import { DEFAULT_PROFILES, WORKOUT_PLAN_DATA } from '../data/initialWorkoutPlan';
+import { DEFAULT_PROFILES } from '../data/initialWorkoutPlan';
 
 const STORAGE_KEYS = {
   ACTIVE_PROFILE_ID: 'liquid_fitness_active_profile',
@@ -24,27 +22,66 @@ export class StorageService {
       const stored = localStorage.getItem(STORAGE_KEYS.PROFILES);
       if (stored) {
         const parsed: UserProfile[] = JSON.parse(stored);
-        // Ensure modern light theme colors are applied
-        const updated = parsed.map(p => {
-          const defaultMatch = DEFAULT_PROFILES.find(d => d.id === p.id);
-          if (defaultMatch) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((p) => {
+            const themeColor = p.themeColor || (p.id === 'person_1' ? '#0284c7' : '#e11d48');
             return {
               ...p,
-              themeColor: defaultMatch.themeColor,
-              accentGradient: defaultMatch.accentGradient,
-              glowColor: defaultMatch.glowColor,
-              avatarEmoji: defaultMatch.avatarEmoji,
+              themeColor,
+              accentGradient:
+                p.accentGradient ||
+                (p.id === 'person_1'
+                  ? 'linear-gradient(135deg, #0284c7 0%, #2563eb 100%)'
+                  : 'linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)'),
+              glowColor:
+                p.glowColor ||
+                (p.id === 'person_1' ? 'rgba(2, 132, 199, 0.22)' : 'rgba(225, 29, 72, 0.22)'),
             };
-          }
-          return p;
-        });
-        return updated;
+          });
+        }
       }
     } catch {
       // Fallback
     }
-    this.saveProfiles(DEFAULT_PROFILES);
     return DEFAULT_PROFILES;
+  }
+
+  /**
+   * Check if user has explicitly initiated their duo profiles
+   */
+  static hasInitiatedProfiles(): boolean {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.PROFILES);
+      if (!stored) return false;
+      const parsed: UserProfile[] = JSON.parse(stored);
+      return (
+        Array.isArray(parsed) &&
+        parsed.length >= 2 &&
+        Boolean(parsed[0]?.name && parsed[1]?.name) &&
+        parsed[0]?.name !== 'Partner 1' &&
+        parsed[1]?.name !== 'Partner 2'
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Clear all local fitness data for fresh restart
+   */
+  static clearAll(): void {
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('liquid_fitness_')) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (e) {
+      console.warn('Storage clear error:', e);
+    }
   }
 
   /**
@@ -64,7 +101,7 @@ export class StorageService {
   static getActiveProfileId(): string {
     const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_PROFILE_ID);
     if (saved) return saved;
-    return DEFAULT_PROFILES[0]?.id ?? 'krish';
+    return 'person_1';
   }
 
   /**
@@ -107,34 +144,8 @@ export class StorageService {
       console.warn('Error reading day log:', e);
     }
 
-    // Initialize clean log based on the plan
-    const profilePlans = Object.prototype.hasOwnProperty.call(WORKOUT_PLAN_DATA, profileId)
-      ? (Reflect.get(WORKOUT_PLAN_DATA, profileId) as Record<string, Exercise[]> | undefined)
-      : undefined;
-    const dayExercises =
-      profilePlans && Object.prototype.hasOwnProperty.call(profilePlans, dayKey)
-        ? ((Reflect.get(profilePlans, dayKey) as Exercise[] | undefined) ?? [])
-        : [];
+    // Clean empty progress map (populated dynamically as exercises are logged)
     const initialProgress: Record<string, ExerciseProgress> = {};
-
-    dayExercises.forEach(ex => {
-      const sets: SetRecord[] = [];
-      for (let i = 1; i <= ex.targetSets; i++) {
-        sets.push({
-          setNumber: i,
-          weightKg: '',
-          repsCompleted: '',
-          rpeAchieved: ex.targetRpe || '7-8',
-          isCompleted: false,
-        });
-      }
-      initialProgress[ex.id] = {
-        exerciseId: ex.id,
-        sets,
-        isFullyCompleted: false,
-        userNotes: '',
-      };
-    });
 
     const newLog: WorkoutDayLog = {
       profileId,
@@ -166,12 +177,31 @@ export class StorageService {
       );
       if (!res.ok) return null;
       const data = await res.json();
-      if (!data.success || !Array.isArray(data.sets) || data.sets.length === 0) {
+      if (!data.success || !Array.isArray(data.sets)) {
         return null;
       }
 
-      // Merge saved sets from SQLite into dayLog
-      const baseLog = this.getDayLog(profileId, dateStr, dayKey);
+      // If SQLite D1 returned 0 sets (e.g. after reinit, truncate, or fresh day),
+      // purge any stale localStorage cache and return a pristine empty log
+      if (data.sets.length === 0) {
+        const cleanLog: WorkoutDayLog = {
+          profileId,
+          dateStr,
+          dayKey,
+          exercisesProgress: {},
+          completedPercentage: 0,
+          isWorkoutFinished: false,
+          updatedAt: new Date().toISOString(),
+        };
+        const storageKey = `${STORAGE_KEYS.WORKOUT_LOGS}_${profileId}_${dateStr}`;
+        try {
+          localStorage.removeItem(storageKey);
+        } catch {
+          // ignore
+        }
+        return cleanLog;
+      }
+
       type RemoteSet = {
         exerciseId?: string;
         exercise_id?: string;
@@ -187,38 +217,41 @@ export class StorageService {
         is_completed?: boolean | number;
       };
 
-      const applyRemoteValues = (targetSet: SetRecord, s: RemoteSet): void => {
-        const weight = s.weightKg ?? s.weight_kg;
-        if (weight !== null && weight !== undefined) {
-          targetSet.weightKg = String(weight);
-        }
-        const reps = s.repsCompleted ?? s.reps_completed;
-        if (reps) {
-          targetSet.repsCompleted = String(reps);
-        }
-        const rpe = s.rpeAchieved ?? s.rpe_achieved;
-        if (rpe) {
-          targetSet.rpeAchieved = String(rpe);
-        }
-        targetSet.isCompleted = Boolean(s.isCompleted ?? s.is_completed);
-      };
-
+      // Build progress map strictly from remote D1 sets
+      const cleanProgress: Record<string, ExerciseProgress> = {};
       data.sets.forEach((s: RemoteSet) => {
         const exId = s.exerciseId ?? s.exercise_id;
         const setNum = s.setNumber ?? s.set_number;
         if (!exId || !setNum) return;
 
-        const progress = Object.prototype.hasOwnProperty.call(baseLog.exercisesProgress, exId)
-          ? (Reflect.get(baseLog.exercisesProgress, exId) as ExerciseProgress | undefined)
-          : undefined;
-        const targetSet = progress?.sets[setNum - 1];
-        if (targetSet) {
-          applyRemoteValues(targetSet, s);
+        if (!cleanProgress[exId]) {
+          cleanProgress[exId] = {
+            exerciseId: exId,
+            sets: [],
+            isFullyCompleted: false,
+            userNotes: '',
+          };
         }
+        cleanProgress[exId].sets.push({
+          setNumber: setNum,
+          weightKg: s.weightKg !== null && s.weightKg !== undefined ? String(s.weightKg ?? s.weight_kg) : '',
+          repsCompleted: String(s.repsCompleted ?? s.reps_completed ?? ''),
+          rpeAchieved: String(s.rpeAchieved ?? s.rpe_achieved ?? '7-8'),
+          isCompleted: Boolean(s.isCompleted ?? s.is_completed),
+        });
       });
 
-      this.saveDayLog(baseLog);
-      return baseLog;
+      const syncedLog: WorkoutDayLog = {
+        profileId,
+        dateStr,
+        dayKey,
+        exercisesProgress: cleanProgress,
+        completedPercentage: 0,
+        isWorkoutFinished: false,
+        updatedAt: new Date().toISOString(),
+      };
+      this.saveDayLog(syncedLog);
+      return syncedLog;
     } catch {
       return null;
     }
@@ -364,6 +397,25 @@ export class StorageService {
       localStorage.setItem(storageKey, JSON.stringify(stats));
     } catch (e) {
       console.warn('Error saving stats:', e);
+    }
+  }
+
+  /**
+   * Clear all cached day logs and streak stats from localStorage
+   */
+  static clearWorkoutLogs(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith(STORAGE_KEYS.WORKOUT_LOGS) || key.startsWith(STORAGE_KEYS.STATS))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (e) {
+      console.warn('Error clearing workout logs:', e);
     }
   }
 }

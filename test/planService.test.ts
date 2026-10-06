@@ -176,18 +176,18 @@ describe('PlanService', () => {
     });
   });
 
-  describe('resetDayPlan', () => {
-    it('returns true when reset succeeds', async () => {
+  describe('seedPreWorkoutPlan', () => {
+    it('returns true when seeding succeeds', async () => {
       globalThis.fetch = vi.fn().mockResolvedValue({ ok: true } as Response);
 
-      const res = await PlanService.resetDayPlan('user_1', 'monday');
+      const res = await PlanService.seedPreWorkoutPlan(true);
       expect(res).toBe(true);
     });
 
-    it('returns false when reset fails', async () => {
+    it('returns false when seeding fails', async () => {
       globalThis.fetch = vi.fn().mockRejectedValue(new Error('Server error'));
 
-      const res = await PlanService.resetDayPlan('user_1', 'monday');
+      const res = await PlanService.seedPreWorkoutPlan(true);
       expect(res).toBe(false);
     });
   });

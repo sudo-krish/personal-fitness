@@ -93,6 +93,20 @@ db-setup: ## Provision Cloudflare D1 database and apply remote migrations
 	@echo "Provisioning D1 database and applying remote migrations..."
 	@node scripts/setup-d1-ci.js
 
+db-truncate-and-load: ## Atomically truncate and reload exercises in remote Cloudflare D1
+	@echo "Truncating and reloading exercise library in remote D1..."
+	@node scripts/truncate-and-load-db.js --remote
+
+reinit-local: ## Wipe all tables and reload clean exercise library in local D1
+	@echo "Re-initializing local D1 database (wiping all tables & reloading library)..."
+	@node scripts/reinit-database.js --local
+
+reinit-remote: ## Wipe all tables and reload clean exercise library in remote Cloudflare D1
+	@echo "Re-initializing remote Cloudflare D1 database (wiping all tables & reloading library)..."
+	@node scripts/reinit-database.js --remote
+
+reinit: reinit-local ## Alias for reinit-local
+
 deploy: build ## Build production assets and deploy to Cloudflare Pages
 	@echo "Deploying production bundle to Cloudflare Pages ($(PROJECT_NAME))..."
 	@npx wrangler pages deploy $(DIST_DIR) --project-name=$(PROJECT_NAME)

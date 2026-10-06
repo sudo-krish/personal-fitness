@@ -15,7 +15,6 @@ export function VideoDrawer({
   videoUrl,
   exerciseName,
 }: VideoDrawerProps) {
-  // Robust YouTube embed URL extractor (handles standard, shorts, and youtu.be)
   const getEmbedUrl = (url: string) => {
     if (!url) return '';
     try {
@@ -24,7 +23,6 @@ export function VideoDrawer({
         return url.replace('youtube.com/embed/', 'youtube-nocookie.com/embed/');
       }
 
-      // Handle YouTube Shorts: /shorts/VIDEO_ID
       if (url.includes('/shorts/')) {
         const parts = url.split('/shorts/');
         const videoId = parts[1]?.split('?')[0]?.split('&')[0]?.replace('/', '');
@@ -34,14 +32,11 @@ export function VideoDrawer({
       }
 
       const parsed = new URL(url);
-
-      // Standard youtube.com/watch?v=ID
       if (parsed.hostname.includes('youtube.com')) {
         const v = parsed.searchParams.get('v');
         if (v) return `https://www.youtube-nocookie.com/embed/${v}?autoplay=1&rel=0&playsinline=1`;
       }
 
-      // youtu.be/ID
       if (parsed.hostname.includes('youtu.be')) {
         const id = parsed.pathname.replace('/', '').split('?')[0];
         if (id) return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`;
@@ -60,91 +55,34 @@ export function VideoDrawer({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'center',
-          }}
-        >
-          {/* Dim Backdrop */}
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
+          {/* Backdrop Scrim */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundColor: 'rgba(15, 23, 42, 0.55)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-            }}
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
           />
 
-          {/* Bottom Sheet Modal */}
+          {/* Drawer Panel */}
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-            style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: '520px',
-              backgroundColor: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(30px) saturate(190%)',
-              WebkitBackdropFilter: 'blur(30px) saturate(190%)',
-              borderTopLeftRadius: '26px',
-              borderTopRightRadius: '26px',
-              borderTop: '1px solid rgba(255, 255, 255, 0.95)',
-              boxShadow: '0 -16px 40px rgba(15, 23, 42, 0.14), inset 0 1px 1px #FFFFFF',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              paddingBottom: 'calc(var(--safe-bottom, 0px) + 20px)',
-            }}
+            className="relative w-full max-w-xl bg-white dark:bg-slate-900 border-t sm:border border-slate-200/90 dark:border-slate-800 shadow-2xl rounded-t-[28px] sm:rounded-3xl flex flex-col overflow-hidden pb-6 z-10"
           >
-            {/* Grab Handle */}
-            <div
-              style={{
-                width: '36px',
-                height: '4px',
-                borderRadius: '9999px',
-                backgroundColor: '#CBD5E1',
-                margin: '10px auto 4px auto',
-              }}
-            />
+            {/* Grab Handle (mobile) */}
+            <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700 mx-auto mt-3 mb-1 sm:hidden" />
 
             {/* Header */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 20px',
-                borderBottom: '1px solid rgba(226, 232, 240, 0.7)',
-              }}
-            >
-              <div style={{ minWidth: 0, flex: 1, paddingRight: '12px' }}>
-                <span className="tech-tag" style={{ marginBottom: '2px' }}>
-                  TECHNIQUE GUIDE
+            <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-100 dark:border-slate-800">
+              <div className="min-w-0 flex-1 pr-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                  Technique Demonstration
                 </span>
-                <h3
-                  style={{
-                    fontFamily: 'var(--font-athletic)',
-                    fontSize: '1.1875rem',
-                    fontWeight: 800,
-                    color: '#0F172A',
-                    margin: 0,
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
+                <h3 className="text-base font-extrabold text-slate-900 dark:text-white truncate">
                   {exerciseName}
                 </h3>
               </div>
@@ -152,68 +90,36 @@ export function VideoDrawer({
               <button
                 type="button"
                 onClick={handleClose}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '9999px',
-                  border: 'none',
-                  backgroundColor: 'rgba(241, 245, 249, 0.9)',
-                  color: '#64748B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
+                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-colors cursor-pointer shrink-0"
+                aria-label="Close video drawer"
               >
-                <X style={{ width: '16px', height: '16px' }} />
+                <X size={16} />
               </button>
             </div>
 
             {/* Video Player Container */}
-            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  aspectRatio: '16/9',
-                  borderRadius: '18px',
-                  overflow: 'hidden',
-                  backgroundColor: '#0F172A',
-                  boxShadow: '0 4px 16px rgba(15, 23, 42, 0.12)',
-                }}
-              >
+            <div className="p-6 flex flex-col gap-4">
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-lg">
                 {embedUrl ? (
                   <iframe
                     src={embedUrl}
                     title={exerciseName}
-                    style={{ width: '100%', height: '100%', border: 'none' }}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
+                    className="w-full h-full border-0"
                   />
                 ) : (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '100%',
-                      color: '#94A3B8',
-                      gap: '8px',
-                    }}
-                  >
-                    <AlertCircle style={{ width: '24px', height: '24px' }} />
-                    <span style={{ fontSize: '0.875rem' }}>No direct preview available</span>
+                  <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
+                    <AlertCircle size={24} />
+                    <span className="text-xs">No video preview available</span>
                   </div>
                 )}
               </div>
 
               {/* Action Bar */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
-                  Exercise form demonstration
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-slate-400">
+                  YouTube technique tutorial
                 </span>
 
                 {videoUrl && (
@@ -221,24 +127,11 @@ export function VideoDrawer({
                     href={videoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      padding: '6px 12px',
-                      borderRadius: '10px',
-                      backgroundColor: 'rgba(2, 132, 199, 0.1)',
-                      border: '1px solid rgba(2, 132, 199, 0.2)',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      color: '#0284C7',
-                      textDecoration: 'none',
-                      transition: 'all 0.15s ease',
-                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 font-bold hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors"
                   >
-                    <Play style={{ width: '11px', height: '11px', fill: 'currentColor' }} />
-                    <span>Open Form in YouTube</span>
-                    <ExternalLink style={{ width: '11px', height: '11px' }} />
+                    <Play size={12} className="fill-current" />
+                    <span>Watch on YouTube</span>
+                    <ExternalLink size={12} />
                   </a>
                 )}
               </div>
