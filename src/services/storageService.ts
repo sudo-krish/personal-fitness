@@ -23,25 +23,24 @@ type RemoteSet = {
   is_completed?: boolean | number;
 };
 
-function parseRemoteSet(s: RemoteSet): { exId: string; setRecord: SetRecord } | null {
-  const exId = s.exerciseId || s.exercise_id;
-  const setNum = s.setNumber || s.set_number;
-  if (!exId || !setNum) return null;
+function resolveString(val1: unknown, val2: unknown, fallback = ''): string {
+  const val = val1 ?? val2;
+  return val !== null && val !== undefined ? String(val) : fallback;
+}
 
-  const rawW = s.weightKg ?? s.weight_kg;
-  const weightKg = rawW != null ? String(rawW) : '';
-  const repsCompleted = String(s.repsCompleted ?? s.reps_completed ?? '');
-  const rpeAchieved = String(s.rpeAchieved ?? s.rpe_achieved ?? '7-8');
-  const isCompleted = Boolean(s.isCompleted ?? s.is_completed);
+function parseRemoteSet(s: RemoteSet): { exId: string; setRecord: SetRecord } | null {
+  const exId = s.exerciseId ?? s.exercise_id;
+  const setNum = s.setNumber ?? s.set_number;
+  if (!exId || !setNum) return null;
 
   return {
     exId,
     setRecord: {
       setNumber: setNum,
-      weightKg,
-      repsCompleted,
-      rpeAchieved,
-      isCompleted,
+      weightKg: resolveString(s.weightKg, s.weight_kg),
+      repsCompleted: resolveString(s.repsCompleted, s.reps_completed),
+      rpeAchieved: resolveString(s.rpeAchieved, s.rpe_achieved, '7-8'),
+      isCompleted: Boolean(s.isCompleted ?? s.is_completed),
     },
   };
 }
