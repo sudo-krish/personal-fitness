@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Sheet } from '../components/ui/Sheet';
 import { CropMarks } from '../components/art/CropMarks';
 import { ExerciseThumb } from '../components/ui/ExerciseThumb';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { Exercise } from '../types/workout';
 import { Search, X, Play, Loader2, Dumbbell, Sparkles } from 'lucide-react';
 import { haptics } from '../lib/haptics';
@@ -60,9 +61,10 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
         </div>
       )}
 
-      {/* L1: FROSTED SEARCH PILL (First element, no top header) */}
-      <div className="relative w-full">
-        <div className="glass rounded-full flex items-center px-4 py-3 gap-3 focus-within:ring-2 focus-within:ring-sage-500 transition-all">
+      {/* L1: FROSTED SEARCH PILL WITH THEME TOGGLE */}
+      <div className="flex items-center gap-2.5 w-full">
+        <div className="relative flex-1">
+          <div className="glass rounded-full flex items-center px-4 py-3 gap-3 focus-within:ring-2 focus-within:ring-sage-500 transition-all">
           <Search size={18} className="text-ink-muted shrink-0" />
           <input
             type="text"
@@ -80,7 +82,9 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
               <X size={16} />
             </button>
           )}
+          </div>
         </div>
+        <ThemeToggle />
       </div>
 
       {/* L2: MUSCLE FILTER CHIPS */}

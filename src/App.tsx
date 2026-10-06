@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { RouterProvider, useRouter } from './router/Router';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { HomePage } from './pages/HomePage';
 import { TrainPage } from './pages/TrainPage';
 import { ExerciseLibraryPage } from './pages/ExerciseLibraryPage';
@@ -94,11 +95,13 @@ function AppContent() {
 
 export function App() {
   return (
-    <RouterProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </RouterProvider>
+    <ThemeProvider>
+      <RouterProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </RouterProvider>
+    </ThemeProvider>
   );
 }
 

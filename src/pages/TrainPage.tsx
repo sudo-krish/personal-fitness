@@ -12,6 +12,7 @@ import { SetBeads } from '../components/art/SetBeads';
 import { RestTimerHUD } from '../features/workout/RestTimerHUD';
 import { CropMarks } from '../components/art/CropMarks';
 import { ExerciseThumb } from '../components/ui/ExerciseThumb';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { getSplitCoverPath } from '../lib/assetsMap';
 import { DAY_SCHEDULES } from '../data/initialWorkoutPlan';
 import { Exercise } from '../types/workout';
@@ -122,6 +123,14 @@ export function TrainPage({ onOpenVideo }: TrainPageProps) {
 
   return (
     <div className="w-full max-w-[560px] mx-auto px-5 pt-4 pb-36 animate-rise">
+      {/* Top Header Controls */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+          Duo Training Session
+        </span>
+        <ThemeToggle />
+      </div>
+
       {/* R1: SLIM DAY STRIP */}
       <div className="relative w-full h-32 rounded-3xl overflow-hidden bg-canvas mb-4">
         <img
