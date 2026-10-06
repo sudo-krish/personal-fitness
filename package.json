@@ -18,29 +18,31 @@
     "db:reinit:local": "node scripts/reinit-database.js --local"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.3.3",
     "canvas-confetti": "^1.9.4",
     "drizzle-orm": "^0.45.2",
     "lucide-react": "^1.47.0",
     "motion": "^13.4.0",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "tailwindcss": "^4.3.3"
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "drizzle-kit": "^0.31.10",
+    "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
     "wrangler": "^4.135.0"
   },
   "overrides": {
     "esbuild": "^0.25.0",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.5",
+    "source-map-js": "^1.2.2",
+    "undici": "^7.30.0"
   },
   "engines": {
     "node": ">=24.0.0"

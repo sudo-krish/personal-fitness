@@ -78,12 +78,11 @@ npx wrangler d1 create fitness-db
 Wrangler will output a `database_id`. Copy it.
 
 ### Step 2: Configure `wrangler.toml`
-Open [`wrangler.toml`](wrangler.toml) and update `database_id`:
+Verify [`wrangler.toml`](wrangler.toml) configures the D1 binding with the database name:
 ```toml
 [[d1_databases]]
 binding = "DB"
 database_name = "fitness-db"
-database_id = "<YOUR_D1_DATABASE_ID>"
 migrations_dir = "migrations"
 ```
 

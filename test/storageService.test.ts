@@ -71,6 +71,44 @@ describe('StorageService', () => {
       StorageService.setActiveProfileId('profile-2');
       expect(StorageService.getActiveProfileId()).toBe('profile-2');
     });
+
+    it('determines if profiles have been initiated', () => {
+      expect(StorageService.hasInitiatedProfiles()).toBe(false);
+
+      StorageService.saveProfiles([
+        { ...DEFAULT_PROFILES[0]!, name: 'Partner 1' },
+        { ...DEFAULT_PROFILES[1]!, name: 'Partner 2' },
+      ]);
+      expect(StorageService.hasInitiatedProfiles()).toBe(false);
+
+      StorageService.saveProfiles([
+        { ...DEFAULT_PROFILES[0]!, name: 'Alex' },
+        { ...DEFAULT_PROFILES[1]!, name: 'Jordan' },
+      ]);
+      expect(StorageService.hasInitiatedProfiles()).toBe(true);
+
+      localStorage.setItem('liquid_fitness_profiles', 'invalid-json');
+      expect(StorageService.hasInitiatedProfiles()).toBe(false);
+    });
+
+    it('clears all local fitness data with clearAll', () => {
+      localStorage.setItem('liquid_fitness_test', '123');
+      localStorage.setItem('other_app_key', 'keep');
+
+      StorageService.clearAll();
+      expect(localStorage.getItem('liquid_fitness_test')).toBeNull();
+      expect(localStorage.getItem('other_app_key')).toBe('keep');
+
+      const errorStorage = {
+        ...localStorage,
+        length: 1,
+        key: vi.fn(() => {
+          throw new Error('KeyError');
+        }),
+      };
+      globalThis.localStorage = errorStorage as unknown as Storage;
+      expect(() => StorageService.clearAll()).not.toThrow();
+    });
   });
 
   describe('dates', () => {
@@ -350,6 +388,32 @@ describe('StorageService', () => {
       globalThis.localStorage = errorStorage as unknown as Storage;
       const fallbackStats = StorageService.getUserStats('person_1');
       expect(fallbackStats.currentStreak).toBe(1);
+    });
+  });
+
+  describe('clearWorkoutLogs', () => {
+    it('clears cached logs and stats from localStorage', () => {
+      localStorage.setItem('liquid_fitness_logs_test', 'val1');
+      localStorage.setItem('liquid_fitness_stats_test', 'val2');
+      localStorage.setItem('other_key', 'val3');
+
+      StorageService.clearWorkoutLogs();
+
+      expect(localStorage.getItem('liquid_fitness_logs_test')).toBeNull();
+      expect(localStorage.getItem('liquid_fitness_stats_test')).toBeNull();
+      expect(localStorage.getItem('other_key')).toBe('val3');
+    });
+
+    it('handles localStorage errors gracefully in clearWorkoutLogs', () => {
+      const errorStorage = {
+        ...localStorage,
+        length: 1,
+        key: vi.fn(() => {
+          throw new Error('KeyError');
+        }),
+      };
+      globalThis.localStorage = errorStorage as unknown as Storage;
+      expect(() => StorageService.clearWorkoutLogs()).not.toThrow();
     });
   });
 });

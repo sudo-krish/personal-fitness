@@ -54,6 +54,8 @@ update-makelib: ## Update makelib submodule to latest remote revision
 	@npm --prefix "$(MAKELIB_DIR)" install
 	@echo "makelib-node updated successfully."
 
+NO_DEFAULT_BUILD := 1
+
 # Include makelib core library
 -include $(MAKELIB_DIR)/core.mk
 

@@ -38,10 +38,10 @@ function applySetUpdate(
   sets: SetRecord[],
   setNumber: number,
   updates: Partial<SetRecord>,
-  onNewlyCompleted?: () => void
+  onNewlyCompleted?: () => void,
 ): SetRecord[] {
   const result = [...sets];
-  const setIdx = result.findIndex((s) => s.setNumber === setNumber);
+  const setIdx = result.findIndex(s => s.setNumber === setNumber);
   const currentSet = result[setIdx];
 
   if (setIdx !== -1 && currentSet) {
@@ -63,13 +63,11 @@ function applySetUpdate(
 
 function calculateWorkoutCompletion(
   exercisesProgress: Record<string, ExerciseProgress>,
-  exerciseIds: string[]
+  exerciseIds: string[],
 ): { completedPercentage: number; isWorkoutFinished: boolean } {
   if (exerciseIds.length === 0) return { completedPercentage: 0, isWorkoutFinished: false };
 
-  const completedExCount = exerciseIds.filter(
-    (id) => exercisesProgress[id]?.isFullyCompleted
-  ).length;
+  const completedExCount = exerciseIds.filter(id => exercisesProgress[id]?.isFullyCompleted).length;
 
   const completedPercentage = Math.round((completedExCount / exerciseIds.length) * 100);
   return {
@@ -103,7 +101,7 @@ function computeSetStats(exercises: Exercise[], dayLog?: WorkoutDayLog) {
     totalSets += ex.targetSets;
     const progress = dayLog?.exercisesProgress[ex.id];
     if (progress) {
-      completedSets += progress.sets.filter((s) => s.isCompleted).length;
+      completedSets += progress.sets.filter(s => s.isCompleted).length;
     }
   }
   return { completedSets, totalSets };
@@ -127,7 +125,7 @@ function resolveInitialDayKey(todayKey: string): string {
 
 function buildDayCompletionStatus(
   dayLogs: Record<string, WorkoutDayLog>,
-  activeProfileId: string
+  activeProfileId: string,
 ): Record<string, boolean> {
   const status: Record<string, boolean> = {};
   for (const d of DAY_SCHEDULES) {
@@ -143,7 +141,7 @@ function computeUpdatedDayLog(
   exerciseId: string,
   setNumber: number,
   updates: Partial<SetRecord>,
-  onNewlyCompleted?: () => void
+  onNewlyCompleted?: () => void,
 ): WorkoutDayLog {
   const existing = targetLog.exercisesProgress[exerciseId];
   const exProgress: ExerciseProgress = existing ?? {
@@ -152,11 +150,11 @@ function computeUpdatedDayLog(
     isFullyCompleted: false,
   };
 
-  const currentEx = targetExercises.find((e) => e.id === exerciseId);
+  const currentEx = targetExercises.find(e => e.id === exerciseId);
   const targetSetsCount = currentEx?.targetSets ?? setNumber;
   const paddedSets = ensureSetsPadded(exProgress.sets, targetSetsCount);
   const updatedSets = applySetUpdate(paddedSets, setNumber, updates, onNewlyCompleted);
-  const isFullyCompleted = updatedSets.length > 0 && updatedSets.every((s) => s.isCompleted);
+  const isFullyCompleted = updatedSets.length > 0 && updatedSets.every(s => s.isCompleted);
 
   const newProgress = {
     ...targetLog.exercisesProgress,
@@ -169,7 +167,7 @@ function computeUpdatedDayLog(
 
   const { completedPercentage, isWorkoutFinished } = calculateWorkoutCompletion(
     newProgress,
-    targetExercises.map((e) => e.id)
+    targetExercises.map(e => e.id),
   );
 
   return {
@@ -191,7 +189,9 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
 
   const todayKey = StorageService.getTodayDayKey();
   const todayDateStr = StorageService.getTodayDateStr();
-  const [selectedDayKey, setSelectedDayKey] = useState<string>(() => resolveInitialDayKey(todayKey));
+  const [selectedDayKey, setSelectedDayKey] = useState<string>(() =>
+    resolveInitialDayKey(todayKey),
+  );
 
   const [dayLogs, setDayLogs] = useState<Record<string, WorkoutDayLog>>({});
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -201,10 +201,10 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
 
   useEffect(() => {
     let active = true;
-    PlanService.getExercises('person_1', selectedDayKey).then((list) => {
+    PlanService.getExercises('person_1', selectedDayKey).then(list => {
       if (active) setCustomP1Exercises(list);
     });
-    PlanService.getExercises('person_2', selectedDayKey).then((list) => {
+    PlanService.getExercises('person_2', selectedDayKey).then(list => {
       if (active) setCustomP2Exercises(list);
     });
     return () => {
@@ -218,14 +218,14 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
       const logKey = `${pId}_${selectedDayKey}`;
       if (!dayLogs[logKey]) {
         const loaded = StorageService.getDayLog(pId, todayDateStr, selectedDayKey);
-        setDayLogs((prev) => ({ ...prev, [logKey]: loaded }));
+        setDayLogs(prev => ({ ...prev, [logKey]: loaded }));
       }
 
       setIsSyncing(true);
       StorageService.fetchRemoteDayLog(pId, todayDateStr, selectedDayKey)
-        .then((remoteLog) => {
+        .then(remoteLog => {
           if (active && remoteLog) {
-            setDayLogs((prev) => ({ ...prev, [logKey]: remoteLog }));
+            setDayLogs(prev => ({ ...prev, [logKey]: remoteLog }));
           }
         })
         .finally(() => {
@@ -246,7 +246,7 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
   };
 
   const currentSchedule: DaySchedule =
-    DAY_SCHEDULES.find((d) => d.key === selectedDayKey) ?? DAY_SCHEDULES[0]!;
+    DAY_SCHEDULES.find(d => d.key === selectedDayKey) ?? DAY_SCHEDULES[0]!;
 
   const p1Exercises: Exercise[] = customP1Exercises ?? [];
   const p2Exercises: Exercise[] = customP2Exercises ?? [];
@@ -262,7 +262,7 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
     profileId: 'person_1' | 'person_2',
     exerciseId: string,
     setNumber: number,
-    updates: Partial<SetRecord>
+    updates: Partial<SetRecord>,
   ) => {
     const isTargetP1 = profileId === 'person_1';
     const targetLog = isTargetP1 ? p1DayLog : p2DayLog;
@@ -278,11 +278,11 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
         if (onStartRest) onStartRest();
         haptics.success();
         audio.playSetComplete();
-      }
+      },
     );
 
     StorageService.saveDayLog(updatedLog);
-    setDayLogs((prev) => ({ ...prev, [`${profileId}_${selectedDayKey}`]: updatedLog }));
+    setDayLogs(prev => ({ ...prev, [`${profileId}_${selectedDayKey}`]: updatedLog }));
 
     if (!targetLog.isWorkoutFinished && updatedLog.isWorkoutFinished) {
       triggerCelebration(profileId);
@@ -321,7 +321,7 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
     },
     reloadPlan: () => {
       setDayLogs({});
-      setPlanRefreshKey((k) => k + 1);
+      setPlanRefreshKey(k => k + 1);
     },
   };
 }
