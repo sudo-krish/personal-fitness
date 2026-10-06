@@ -1,5 +1,6 @@
 import { Exercise, UserProfile } from '../types/workout';
 import { StorageService } from './storageService';
+import { WORKOUT_PLAN_DATA } from '../data/initialWorkoutPlan';
 
 function toSafeString(val: unknown, fallback = ''): string {
   if (typeof val === 'string' && val.length > 0) {
@@ -73,7 +74,7 @@ export class PlanService {
       );
       if (res.ok) {
         const data = await res.json();
-        if (data.success && Array.isArray(data.exercises)) {
+        if (data.success && Array.isArray(data.exercises) && data.exercises.length > 0) {
           return data.exercises.map(mapExerciseDto);
         }
       }
@@ -81,6 +82,13 @@ export class PlanService {
       console.warn('[PlanService] Error fetching from /api/exercises:', e);
     }
 
+    const profilePlans = Object.prototype.hasOwnProperty.call(WORKOUT_PLAN_DATA, profileId)
+      ? (Reflect.get(WORKOUT_PLAN_DATA, profileId) as Record<string, Exercise[]> | undefined)
+      : undefined;
+    if (profilePlans && Object.prototype.hasOwnProperty.call(profilePlans, dayKey)) {
+      const plan = Reflect.get(profilePlans, dayKey) as Exercise[] | undefined;
+      return Array.isArray(plan) ? plan : [];
+    }
     return [];
   }
 
@@ -192,7 +200,6 @@ export class PlanService {
       return false;
     }
   }
-
 
   /**
    * Fetch library exercises with search, profile filter (tri-state), muscle, and pagination

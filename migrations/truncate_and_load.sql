@@ -1,6 +1,6 @@
 -- ==============================================================================
 -- Atomic Truncate & Load for Cloudflare D1 exercises table
--- Generated: 2026-10-06T17:29:33.814Z
+-- Generated: 2026-10-06T22:23:59.116Z
 -- Total Library Exercises: 876
 -- ==============================================================================
 PRAGMA foreign_keys = OFF;

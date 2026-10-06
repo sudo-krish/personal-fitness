@@ -1,5 +1,12 @@
-import { UserProfile, WorkoutDayLog, ExerciseProgress, SetRecord, UserStats } from '../types/workout';
-import { DEFAULT_PROFILES } from '../data/initialWorkoutPlan';
+import {
+  UserProfile,
+  WorkoutDayLog,
+  ExerciseProgress,
+  SetRecord,
+  UserStats,
+  Exercise,
+} from '../types/workout';
+import { DEFAULT_PROFILES, WORKOUT_PLAN_DATA } from '../data/initialWorkoutPlan';
 
 const STORAGE_KEYS = {
   ACTIVE_PROFILE_ID: 'liquid_fitness_active_profile',
@@ -62,15 +69,6 @@ function buildCleanProgress(remoteSets: RemoteSet[]): Record<string, ExercisePro
     cleanProgress[exId].sets.push(setRecord);
   }
   return cleanProgress;
-}
-
-function purgeLocalDayLogCache(profileId: string, dateStr: string): void {
-  const storageKey = `${STORAGE_KEYS.WORKOUT_LOGS}_${profileId}_${dateStr}`;
-  try {
-    localStorage.removeItem(storageKey);
-  } catch {
-    // ignore
-  }
 }
 
 export class StorageService {
@@ -201,8 +199,34 @@ export class StorageService {
       console.warn('Error reading day log:', e);
     }
 
-    // Clean empty progress map (populated dynamically as exercises are logged)
+    // Initialize clean log based on the plan
+    const profilePlans = Object.prototype.hasOwnProperty.call(WORKOUT_PLAN_DATA, profileId)
+      ? (Reflect.get(WORKOUT_PLAN_DATA, profileId) as Record<string, Exercise[]> | undefined)
+      : undefined;
+    const dayExercises =
+      profilePlans && Object.prototype.hasOwnProperty.call(profilePlans, dayKey)
+        ? ((Reflect.get(profilePlans, dayKey) as Exercise[] | undefined) ?? [])
+        : [];
     const initialProgress: Record<string, ExerciseProgress> = {};
+
+    dayExercises.forEach(ex => {
+      const sets: SetRecord[] = [];
+      for (let i = 1; i <= ex.targetSets; i++) {
+        sets.push({
+          setNumber: i,
+          weightKg: '',
+          repsCompleted: '',
+          rpeAchieved: ex.targetRpe || '7-8',
+          isCompleted: false,
+        });
+      }
+      initialProgress[ex.id] = {
+        exerciseId: ex.id,
+        sets,
+        isFullyCompleted: false,
+        userNotes: '',
+      };
+    });
 
     const newLog: WorkoutDayLog = {
       profileId,
@@ -217,7 +241,6 @@ export class StorageService {
     this.saveDayLog(newLog);
     return newLog;
   }
-
 
   /**
    * Hydrate workout log directly from SQLite (Local or Cloudflare D1)
@@ -235,23 +258,8 @@ export class StorageService {
       );
       if (!res.ok) return null;
       const data = await res.json();
-      if (!data.success || !Array.isArray(data.sets)) {
+      if (!data.success || !Array.isArray(data.sets) || data.sets.length === 0) {
         return null;
-      }
-
-      // If SQLite D1 returned 0 sets (e.g. after reinit, truncate, or fresh day),
-      // purge any stale localStorage cache and return a pristine empty log
-      if (data.sets.length === 0) {
-        purgeLocalDayLogCache(profileId, dateStr);
-        return {
-          profileId,
-          dateStr,
-          dayKey,
-          exercisesProgress: {},
-          completedPercentage: 0,
-          isWorkoutFinished: false,
-          updatedAt: new Date().toISOString(),
-        };
       }
 
       const cleanProgress = buildCleanProgress(data.sets as RemoteSet[]);

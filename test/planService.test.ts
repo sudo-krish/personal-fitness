@@ -191,4 +191,137 @@ describe('PlanService', () => {
       expect(res).toBe(false);
     });
   });
+
+  describe('getLibraryExercises', () => {
+    it('returns exercises and count when successful', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          success: true,
+          exercises: [{ id: 'ex-1', dayKey: 'monday', name: 'Curl' }],
+          total: 1,
+        }),
+      } as Response);
+
+      const res = await PlanService.getLibraryExercises({
+        profileId: 'person_1',
+        search: 'Curl',
+        muscle: 'Biceps',
+        equipment: 'Dumbbell',
+        hasVideo: 'true',
+        limit: 10,
+        offset: 0,
+      });
+      expect(res.exercises.length).toBe(1);
+      expect(res.total).toBe(1);
+    });
+
+    it('returns empty array on network failure', async () => {
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+      const res = await PlanService.getLibraryExercises({});
+      expect(res.exercises).toEqual([]);
+      expect(res.total).toBe(0);
+    });
+  });
+
+  describe('resolveYouTubeVideo', () => {
+    it('returns videoUrl on success', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, videoUrl: 'https://youtube.com/watch?v=123' }),
+      } as Response);
+
+      const url = await PlanService.resolveYouTubeVideo('ex-1', 'Curl');
+      expect(url).toBe('https://youtube.com/watch?v=123');
+    });
+
+    it('returns null on failure', async () => {
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+      const url = await PlanService.resolveYouTubeVideo('ex-1', 'Curl');
+      expect(url).toBeNull();
+    });
+  });
+
+  describe('updateExerciseProfile', () => {
+    it('returns true when patch succeeds', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({ ok: true } as Response);
+
+      const res = await PlanService.updateExerciseProfile('ex-1', 'person_1');
+      expect(res).toBe(true);
+    });
+
+    it('returns false on error', async () => {
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Error'));
+
+      const res = await PlanService.updateExerciseProfile('ex-1', null);
+      expect(res).toBe(false);
+    });
+  });
+
+  describe('updateExerciseVideo', () => {
+    it('returns true when patch succeeds', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({ ok: true } as Response);
+
+      const res = await PlanService.updateExerciseVideo('ex-1', 'https://youtube.com/test');
+      expect(res).toBe(true);
+    });
+
+    it('returns false on error', async () => {
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Error'));
+
+      const res = await PlanService.updateExerciseVideo('ex-1', 'https://youtube.com/test');
+      expect(res).toBe(false);
+    });
+  });
+
+  describe('getProfiles and saveProfiles', () => {
+    it('returns profiles from D1', async () => {
+      const mockProfiles = [{ id: 'person_1', name: 'Alex' }];
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, profiles: mockProfiles }),
+      } as Response);
+
+      const profiles = await PlanService.getProfiles();
+      expect(profiles).toEqual(mockProfiles);
+    });
+
+    it('returns empty array on error', async () => {
+      globalThis.fetch = vi.fn().mockRejectedValue(new Error('Error'));
+
+      const profiles = await PlanService.getProfiles();
+      expect(profiles).toEqual([]);
+    });
+
+    it('saves profiles successfully', async () => {
+      const mockProfiles = [{ id: 'person_1', name: 'Alex' }];
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: true, profiles: mockProfiles }),
+      } as Response);
+
+      const profiles = await PlanService.saveProfiles({ name: 'Alex' }, { name: 'Jordan' });
+      expect(profiles).toEqual(mockProfiles);
+    });
+
+    it('throws on non-ok response', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        statusText: 'Bad Request',
+      } as Response);
+
+      await expect(PlanService.saveProfiles({}, {})).rejects.toThrow('Failed to save profiles');
+    });
+
+    it('throws on success=false response', async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ success: false, error: 'Validation failed' }),
+      } as Response);
+
+      await expect(PlanService.saveProfiles({}, {})).rejects.toThrow('Validation failed');
+    });
+  });
 });

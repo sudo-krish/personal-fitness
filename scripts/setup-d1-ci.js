@@ -78,17 +78,8 @@ async function setupDatabase() {
     console.log(`[CI-D1] Found existing database "${DB_NAME}" with ID: ${dbId}`);
   }
 
-  // 3. Update wrangler.toml with the resolved database_id
-  const wranglerPath = 'wrangler.toml';
-  if (fs.existsSync(wranglerPath)) {
-    let wranglerContent = fs.readFileSync(wranglerPath, 'utf8');
-    wranglerContent = wranglerContent.replace(
-      /database_id\s*=\s*"[^"]*"/,
-      `database_id = "${dbId}"`
-    );
-    fs.writeFileSync(wranglerPath, wranglerContent, 'utf8');
-    console.log(`[CI-D1] Updated wrangler.toml with database_id: ${dbId}`);
-  }
+  // 3. Database identified by name: DB_NAME
+  console.log(`[CI-D1] Using database "${DB_NAME}" directly for all operations.`);
 
   // 4. Apply migrations automatically
   console.log('[CI-D1] Applying pending D1 schema migrations...');
