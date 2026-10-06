@@ -1,246 +1,144 @@
 @import "tailwindcss";
 
+/* Sage & Porcelain — light-only design system (spec v2, §1) */
 @theme {
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
 
-  --color-neon-50: #f0fdf4;
-  --color-neon-100: #dcfce7;
-  --color-neon-200: #bbf7d0;
-  --color-neon-300: #86efac;
-  --color-neon-400: #4ade80;
-  --color-neon-500: #22c55e;
-  --color-neon-600: #16a34a;
-  --color-neon-electric: #00ff66;
-  --color-neon-glow: #39ff14;
+  --color-canvas: #f5f7f2;
+  --color-surface: #ffffff;
+  --color-sunk: #eef2ea;
 
-  --color-pitch-950: #000000;
-  --color-pitch-900: #050a06;
-  --color-pitch-850: #0b140d;
-  --color-pitch-800: #111e14;
-  --color-pitch-700: #192b1d;
+  --color-sage-50: #f0f6ec;
+  --color-sage-100: #e1edd9;
+  --color-sage-200: #cbe0bf;
+  --color-sage-300: #afcd9e;
+  --color-sage-500: #76a061;
+  --color-sage-700: #456a37;
 
-  --color-azure-50: #f0f9ff;
-  --color-azure-100: #e0f2fe;
-  --color-azure-200: #bae6fd;
-  --color-azure-400: #38bdf8;
-  --color-azure-500: #00e5ff;
-  --color-azure-600: #0284c7;
-  --color-azure-700: #075985;
-  --color-azure-900: #0c4a6e;
+  --color-ink: #1f2a21;
+  --color-ink-muted: #5f6b60;
+  --color-hairline: rgb(31 42 33 / 0.08);
 
-  --color-rose-50: #fff1f2;
-  --color-rose-100: #ffe4e6;
-  --color-rose-200: #fecdd3;
-  --color-rose-400: #ff3366;
-  --color-rose-500: #ff0055;
-  --color-rose-600: #be123c;
-  --color-rose-700: #9f1239;
-  --color-rose-900: #881337;
+  --color-p1-tint: #dcebf1;
+  --color-p1-ink: #3d6b7d;
+  --color-p2-tint: #f5e1da;
+  --color-p2-ink: #9a5b4b;
 
-  --color-emerald-50: #ecfdf5;
-  --color-emerald-500: #00ff66;
-  --color-emerald-600: #059669;
+  --color-butter: #f3ebc9;
+  --color-clay: #a4513f;
 
-  --color-amber-50: #fffbeb;
-  --color-amber-500: #f59e0b;
-  --color-amber-600: #d97706;
-}
+  --radius-card: 28px;
 
-/* ==========================================================================
-   ADAPTIVE THEME SYSTEM (Pitch Black & Electric Neon / Kinetic Light)
-   ========================================================================== */
+  --shadow-card: 0 1px 2px rgb(31 42 33 / 0.04), 0 12px 32px -12px rgb(31 42 33 / 0.1);
+  --shadow-float: 0 18px 40px -16px rgb(31 42 33 / 0.28);
 
-:root {
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 16px);
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Light Theme (Kinetic Athletic Slate) Defaults */
-  --bg-canvas: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-surface-subtle: #f1f5f9;
-  --bg-surface-elevated: #ffffff;
-  --bg-scrim: rgba(15, 23, 42, 0.6);
+  --animate-drift: drift 22s ease-in-out infinite alternate;
+  --animate-rise: rise 420ms var(--ease-soft) both;
 
-  --border-subtle: #e2e8f0;
-  --border-medium: #cbd5e1;
-  --border-highlight: #16a34a;
+  @keyframes drift {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(-3%, 2%, 0);
+    }
+  }
 
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --text-dim: #94a3b8;
-
-  --glass-bg: rgba(255, 255, 255, 0.85);
-  --glass-bg-subtle: rgba(248, 250, 252, 0.8);
-  --glass-border: rgba(226, 232, 240, 0.9);
-  --glass-specular: inset 0 1px 1px rgba(255, 255, 255, 0.9);
-  --glass-shadow: 0 10px 30px -8px rgba(15, 23, 42, 0.08);
-
-  --neon: #16a34a;
-  --neon-glow: rgba(22, 163, 74, 0.2);
-
-  --azure: #0284c7;
-  --azure-light: #f0f9ff;
-  --azure-border: #bae6fd;
-
-  --rose: #e11d48;
-  --rose-light: #fff1f2;
-  --rose-border: #fecdd3;
-
-  --emerald: #10b981;
-  --amber: #f59e0b;
-}
-
-[data-theme="dark"] {
-  /* Dark Theme (Pure Pitch Black & Cyber Electric Neon) */
-  --bg-canvas: #000000;
-  --bg-surface: #060b07;
-  --bg-surface-subtle: #0d150e;
-  --bg-surface-elevated: #121f14;
-  --bg-scrim: rgba(0, 0, 0, 0.88);
-
-  --border-subtle: rgba(0, 255, 102, 0.14);
-  --border-medium: rgba(0, 255, 102, 0.32);
-  --border-highlight: #00ff66;
-
-  --text-primary: #ffffff;
-  --text-secondary: #e2e8f0;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-
-  --glass-bg: rgba(6, 11, 7, 0.85);
-  --glass-bg-subtle: rgba(13, 21, 14, 0.75);
-  --glass-border: rgba(0, 255, 102, 0.24);
-  --glass-specular: inset 0 1px 1px rgba(0, 255, 102, 0.3);
-  --glass-shadow: 0 14px 40px -10px rgba(0, 0, 0, 0.9), 0 0 25px -5px rgba(0, 255, 102, 0.15);
-
-  --neon: #00ff66;
-  --neon-glow: rgba(0, 255, 102, 0.35);
-
-  --azure: #00e5ff;
-  --azure-light: rgba(0, 229, 255, 0.15);
-  --azure-border: rgba(0, 229, 255, 0.35);
-
-  --rose: #ff0055;
-  --rose-light: rgba(255, 0, 85, 0.15);
-  --rose-border: rgba(255, 0, 85, 0.35);
-
-  --emerald: #00ff66;
-  --amber: #ffb703;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg-canvas: #000000;
-    --bg-surface: #060b07;
-    --bg-surface-subtle: #0d150e;
-    --bg-surface-elevated: #121f14;
-    --bg-scrim: rgba(0, 0, 0, 0.88);
-
-    --border-subtle: rgba(0, 255, 102, 0.14);
-    --border-medium: rgba(0, 255, 102, 0.32);
-    --border-highlight: #00ff66;
-
-    --text-primary: #ffffff;
-    --text-secondary: #e2e8f0;
-    --text-muted: #94a3b8;
-    --text-dim: #64748b;
-
-    --glass-bg: rgba(6, 11, 7, 0.85);
-    --glass-bg-subtle: rgba(13, 21, 14, 0.75);
-    --glass-border: rgba(0, 255, 102, 0.24);
-    --glass-specular: inset 0 1px 1px rgba(0, 255, 102, 0.3);
-    --glass-shadow: 0 14px 40px -10px rgba(0, 0, 0, 0.9), 0 0 25px -5px rgba(0, 255, 102, 0.15);
-
-    --neon: #00ff66;
-    --neon-glow: rgba(0, 255, 102, 0.35);
-
-    --azure: #00e5ff;
-    --azure-light: rgba(0, 229, 255, 0.15);
-    --azure-border: rgba(0, 229, 255, 0.35);
-
-    --rose: #ff0055;
-    --rose-light: rgba(255, 0, 85, 0.15);
-    --rose-border: rgba(255, 0, 85, 0.35);
-
-    --emerald: #00ff66;
-    --amber: #ffb703;
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
-/* ==========================================================================
-   GLOBAL BASE & RESET
-   ========================================================================== */
-
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
+/* Frosted glass — buttons and controls only (spec §1.4) */
+@utility glass {
+  background-color: rgb(255 255 255 / 0.55);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgb(255 255 255 / 0.7);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    0 6px 20px -8px rgb(31 42 33 / 0.18);
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  min-height: 100%;
-  font-family: var(--font-sans);
-  background-color: var(--bg-canvas);
-  color: var(--text-primary);
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
-  transition: background-color 0.25s ease, color 0.25s ease;
+@utility glass-strong {
+  background-color: rgb(255 255 255 / 0.72);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgb(255 255 255 / 0.8);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.95),
+    0 18px 40px -16px rgb(31 42 33 / 0.28);
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-medium);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
-}
-
-/* ==========================================================================
-   CYBER & NEON ENHANCEMENTS
-   ========================================================================== */
-
-.neon-glow-sm {
-  box-shadow: 0 0 15px -3px rgba(0, 255, 102, 0.4);
-}
-
-.neon-glow {
-  box-shadow: 0 0 25px -4px rgba(0, 255, 102, 0.55), inset 0 0 15px rgba(0, 255, 102, 0.08);
-}
-
-.neon-glow-lg {
-  box-shadow: 0 0 45px -5px rgba(0, 255, 102, 0.7), inset 0 0 25px rgba(0, 255, 102, 0.15);
-}
-
-.neon-border-pulse {
-  border-color: rgba(0, 255, 102, 0.6);
-  animation: neon-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes neon-pulse {
-  0%, 100% {
-    box-shadow: 0 0 15px rgba(0, 255, 102, 0.35);
-    border-color: rgba(0, 255, 102, 0.5);
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
-  50% {
-    box-shadow: 0 0 30px rgba(0, 255, 102, 0.7);
-    border-color: rgba(0, 255, 102, 0.95);
+}
+
+@layer base {
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    color-scheme: light;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body {
+    margin: 0;
+    min-height: 100%;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  /* Paper grain (spec §1.5) — 2.5% noise so the canvas reads as paper */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-sage-500);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
   }
 }

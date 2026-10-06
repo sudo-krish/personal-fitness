@@ -1,38 +1,30 @@
+export type AvatarRole = 'p1' | 'p2';
 
-export interface AvatarProps {
+interface AvatarProps {
   name: string;
-  emoji?: string;
-  role?: 'person_1' | 'person_2' | 'neutral';
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  role: AvatarRole;
+  size?: number;
   className?: string;
 }
 
-export function Avatar({
-  name,
-  emoji,
-  role = 'neutral',
-  size = 'md',
-  className = '',
-}: AvatarProps) {
-  let sizeClasses = 'w-10 h-10 text-base';
-  if (size === 'sm') sizeClasses = 'w-8 h-8 text-xs';
-  if (size === 'lg') sizeClasses = 'w-14 h-14 text-2xl';
-  if (size === 'xl') sizeClasses = 'w-20 h-20 text-4xl';
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const first = parts[0]?.[0] ?? '';
+  const second = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : (parts[0]?.[1] ?? '');
+  return (first + second).toUpperCase();
+}
 
-  let borderClasses = 'border-2 border-slate-200 dark:border-slate-700';
-  if (role === 'person_1') {
-    borderClasses = 'border-2 border-sky-400 dark:border-sky-500 shadow-sm shadow-sky-500/20';
-  } else if (role === 'person_2') {
-    borderClasses = 'border-2 border-rose-400 dark:border-rose-500 shadow-sm shadow-rose-500/20';
-  }
-
-  const initial = name.trim().charAt(0).toUpperCase() || 'P';
-
+/** Initials in the role tint. Role follows primary/partner, never gender. */
+export function Avatar({ name, role, size = 36, className = '' }: AvatarProps) {
+  const tint = role === 'p1' ? 'bg-p1-tint text-p1-ink' : 'bg-p2-tint text-p2-ink';
   return (
-    <div
-      className={`rounded-2xl flex items-center justify-center font-bold bg-white dark:bg-slate-800 text-slate-800 dark:text-white shrink-0 select-none ${sizeClasses} ${borderClasses} ${className}`}
+    <span
+      aria-hidden
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.36) }}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold tracking-wide ${tint} ${className}`}
     >
-      {emoji ? <span>{emoji}</span> : <span>{initial}</span>}
-    </div>
+      {initialsOf(name)}
+    </span>
   );
 }

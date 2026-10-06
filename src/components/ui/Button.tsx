@@ -1,7 +1,7 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'azure' | 'rose' | 'emerald';
-export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon';
+export type ButtonVariant = 'primary' | 'glass' | 'ghost' | 'danger';
+export type ButtonSize = 'md' | 'sm' | 'icon';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -9,8 +9,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
+  ref?: Ref<HTMLButtonElement>;
 }
 
+/**
+ * Pill button. `primary` is the solid sage CTA; `glass` is the frosted secondary control.
+ */
 export function Button({
   children,
   variant = 'primary',
@@ -20,60 +24,34 @@ export function Button({
   rightIcon,
   disabled,
   className = '',
+  type = 'button',
+  ref,
   ...props
 }: ButtonProps) {
-  // Base sizing
-  let sizeClasses = 'px-4 py-2.5 text-sm gap-2 rounded-xl';
-  if (size === 'sm') sizeClasses = 'px-3 py-1.5 text-xs gap-1.5 rounded-lg';
-  if (size === 'lg') sizeClasses = 'px-6 py-3.5 text-base gap-2.5 rounded-2xl font-semibold';
-  if (size === 'icon') sizeClasses = 'p-2.5 rounded-xl aspect-square flex items-center justify-center';
+  let sizeClasses = 'h-[52px] px-6 text-[15px] gap-2';
+  if (size === 'sm') sizeClasses = 'h-10 px-4 text-[13px] gap-1.5';
+  if (size === 'icon') sizeClasses = 'size-11 justify-center';
 
-  // Variant classes
-  let variantClasses = '';
-  switch (variant) {
-    case 'primary':
-      variantClasses =
-        'bg-slate-900 text-white hover:bg-slate-800 active:scale-[0.98] shadow-sm dark:bg-white dark:text-slate-950 dark:hover:bg-slate-100';
-      break;
-    case 'secondary':
-      variantClasses =
-        'bg-slate-100 text-slate-800 hover:bg-slate-200 border border-slate-200/80 active:scale-[0.98] dark:bg-slate-800/80 dark:text-slate-100 dark:border-slate-700/80 dark:hover:bg-slate-700';
-      break;
-    case 'ghost':
-      variantClasses =
-        'bg-transparent text-slate-600 hover:bg-slate-100 active:scale-[0.98] dark:text-slate-300 dark:hover:bg-slate-800/60';
-      break;
-    case 'danger':
-      variantClasses =
-        'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 active:scale-[0.98] dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-900/60 dark:hover:bg-rose-900/40';
-      break;
-    case 'azure':
-      variantClasses =
-        'bg-sky-500 text-white hover:bg-sky-600 active:scale-[0.98] shadow-sm shadow-sky-500/20';
-      break;
-    case 'rose':
-      variantClasses =
-        'bg-rose-500 text-white hover:bg-rose-600 active:scale-[0.98] shadow-sm shadow-rose-500/20';
-      break;
-    case 'emerald':
-      variantClasses =
-        'bg-emerald-500 text-white hover:bg-emerald-600 active:scale-[0.98] shadow-sm shadow-emerald-500/20';
-      break;
-  }
+  let variantClasses = 'bg-sage-300 text-ink hover:bg-sage-200 font-semibold';
+  if (variant === 'glass') variantClasses = 'glass text-ink hover:bg-white/70 font-medium';
+  if (variant === 'ghost') variantClasses = 'text-ink-muted hover:text-ink hover:bg-sunk font-medium';
+  if (variant === 'danger') variantClasses = 'text-clay hover:bg-p2-tint/60 font-medium';
 
   return (
     <button
+      ref={ref}
+      type={type}
       disabled={disabled || isLoading}
-      className={`inline-flex items-center justify-center font-medium transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none select-none ${sizeClasses} ${variantClasses} ${className}`}
+      className={`inline-flex items-center justify-center rounded-full select-none cursor-pointer transition-[background-color,transform,color] duration-200 ease-(--ease-soft) active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none ${sizeClasses} ${variantClasses} ${className}`}
       {...props}
     >
       {isLoading ? (
-        <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+        <span className="size-4 rounded-full border-2 border-current border-t-transparent animate-spin" aria-hidden />
       ) : (
-        leftIcon && <span className="shrink-0">{leftIcon}</span>
+        leftIcon
       )}
       {children}
-      {!isLoading && rightIcon && <span className="shrink-0">{rightIcon}</span>}
+      {!isLoading && rightIcon}
     </button>
   );
 }

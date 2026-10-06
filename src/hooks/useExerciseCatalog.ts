@@ -7,7 +7,9 @@ export function useExerciseCatalog(pageSize: number = 36) {
   const [search, setSearch] = useState<string>('');
   const [selectedMuscle, setSelectedMuscle] = useState<string>('All');
   const [selectedEquipment, setSelectedEquipment] = useState<string>('All');
-  const [selectedProfileTab, setSelectedProfileTab] = useState<'all' | 'null' | 'person_1' | 'person_2'>('all');
+  const [selectedProfileTab, setSelectedProfileTab] = useState<
+    'all' | 'null' | 'person_1' | 'person_2'
+  >('all');
   const [videoFilter, setVideoFilter] = useState<'all' | 'has' | 'missing'>('all');
 
   // Data & Pagination
@@ -23,7 +25,7 @@ export function useExerciseCatalog(pageSize: number = 36) {
   const showNotice = (msg: string) => {
     setActionNotice(msg);
     setTimeout(() => {
-      setActionNotice((current) => (current === msg ? null : current));
+      setActionNotice(current => (current === msg ? null : current));
     }, 3200);
   };
 
@@ -47,7 +49,7 @@ export function useExerciseCatalog(pageSize: number = 36) {
           setTotalCount(total);
         }
       })
-      .catch((err) => {
+      .catch(err => {
         console.error('Failed to load exercises:', err);
       })
       .finally(() => {
@@ -63,10 +65,10 @@ export function useExerciseCatalog(pageSize: number = 36) {
   const assignProfile = async (
     exerciseId: string,
     newProfileId: 'person_1' | 'person_2' | null,
-    partnerName?: string
+    partnerName?: string,
   ) => {
-    setExercises((prev) =>
-      prev.map((e) => (e.id === exerciseId ? { ...e, profileId: newProfileId } : e))
+    setExercises(prev =>
+      prev.map(e => (e.id === exerciseId ? { ...e, profileId: newProfileId } : e)),
     );
 
     const targetLabel = partnerName || (newProfileId ? 'Partner' : 'Unassigned');
@@ -83,9 +85,7 @@ export function useExerciseCatalog(pageSize: number = 36) {
     const videoUrl = await PlanService.resolveYouTubeVideo(exercise.id, exercise.name);
 
     if (videoUrl) {
-      setExercises((prev) =>
-        prev.map((e) => (e.id === exercise.id ? { ...e, videoUrl } : e))
-      );
+      setExercises(prev => prev.map(e => (e.id === exercise.id ? { ...e, videoUrl } : e)));
       showNotice(`✓ Found video for "${exercise.name}"!`);
     } else {
       showNotice(`Could not auto-find video. You can link one manually.`);
@@ -99,8 +99,8 @@ export function useExerciseCatalog(pageSize: number = 36) {
   const updateVideoUrl = async (exerciseId: string, url: string): Promise<boolean> => {
     const success = await PlanService.updateExerciseVideo(exerciseId, url.trim());
     if (success) {
-      setExercises((prev) =>
-        prev.map((e) => (e.id === exerciseId ? { ...e, videoUrl: url.trim() } : e))
+      setExercises(prev =>
+        prev.map(e => (e.id === exerciseId ? { ...e, videoUrl: url.trim() } : e)),
       );
       showNotice('✓ Video link updated');
     }

@@ -1,5 +1,5 @@
 import { createContext, use, useState, useEffect, type ReactNode } from 'react';
-import { AppRoute } from './routes';
+import { APP_ROUTES, ROUTE_TITLES, type AppRoute } from './routes';
 
 interface RouterContextType {
   currentRoute: AppRoute;
@@ -12,19 +12,8 @@ const RouterContext = createContext<RouterContextType>({
 });
 
 function normalizeRoute(path: string): AppRoute {
-  if (path === '/library' || path.startsWith('/library')) {
-    return '/library';
-  }
-  if (path === '/initiation' || path.startsWith('/initiation')) {
-    return '/initiation';
-  }
-  if (path === '/login' || path.startsWith('/login')) {
-    return '/login';
-  }
-  if (path === '/register' || path.startsWith('/register')) {
-    return '/register';
-  }
-  return '/';
+  const match = APP_ROUTES.find((r) => r !== '/' && (path === r || path.startsWith(`${r}/`)));
+  return match ?? '/';
 }
 
 export function RouterProvider({ children }: { children: ReactNode }) {
@@ -41,11 +30,15 @@ export function RouterProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  useEffect(() => {
+    document.title = `${ROUTE_TITLES[currentRoute]} · Duo Fitness`;
+  }, [currentRoute]);
+
   const navigate = (route: AppRoute) => {
     if (window.location.pathname !== route) {
       window.history.pushState({}, '', route);
       setCurrentRoute(route);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0 });
     }
   };
 

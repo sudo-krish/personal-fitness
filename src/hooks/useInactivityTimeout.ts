@@ -42,7 +42,7 @@ export function useInactivityTimeout({
     lastPulseRef.current = Date.now();
 
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
-    
+
     // Throttle activity event recording to avoid heavy re-renders
     let throttleTimeout: number | null = null;
     const handleEvent = () => {
@@ -54,7 +54,7 @@ export function useInactivityTimeout({
       }
     };
 
-    events.forEach((ev) => window.addEventListener(ev, handleEvent, { passive: true }));
+    events.forEach(ev => window.addEventListener(ev, handleEvent, { passive: true }));
 
     // Periodic check every 15 seconds
     timerCheckRef.current = window.setInterval(() => {
@@ -66,7 +66,7 @@ export function useInactivityTimeout({
     }, 15000);
 
     return () => {
-      events.forEach((ev) => window.removeEventListener(ev, handleEvent));
+      events.forEach(ev => window.removeEventListener(ev, handleEvent));
       if (timerCheckRef.current) clearInterval(timerCheckRef.current);
       if (throttleTimeout) clearTimeout(throttleTimeout);
     };

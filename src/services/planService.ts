@@ -17,6 +17,7 @@ function toSafeNumber(val: unknown, fallback = 0): number {
 }
 
 function mapExerciseDto(e: Record<string, unknown>): Exercise {
+  const profileIdRaw = toSafeString(e.profileId);
   return {
     id: toSafeString(e.id),
     day: toSafeString(e.dayKey),
@@ -28,8 +29,36 @@ function mapExerciseDto(e: Record<string, unknown>): Exercise {
     targetRpe: toSafeString(e.targetRpe, '7-8'),
     notes: toSafeString(e.notes),
     videoUrl: toSafeString(e.videoUrl),
-    profileId: e.profileId as any,
+    profileId: profileIdRaw.length > 0 ? profileIdRaw : null,
   };
+}
+
+export interface LibraryQueryParams {
+  profileId?: string;
+  search?: string;
+  muscle?: string;
+  equipment?: string;
+  hasVideo?: string;
+  limit?: number;
+  offset?: number;
+}
+
+function appendParam(query: URLSearchParams, key: string, value?: string, ignore?: string) {
+  if (value && value !== ignore) {
+    query.set(key, value);
+  }
+}
+
+function buildLibraryQuery(params: LibraryQueryParams): string {
+  const query = new URLSearchParams();
+  appendParam(query, 'profileId', params.profileId);
+  appendParam(query, 'search', params.search);
+  appendParam(query, 'muscle', params.muscle, 'All');
+  appendParam(query, 'pairTag', params.equipment, 'All');
+  appendParam(query, 'hasVideo', params.hasVideo, 'all');
+  if (params.limit) query.set('limit', String(params.limit));
+  if (params.offset !== undefined) query.set('offset', String(params.offset));
+  return query.toString();
 }
 
 export class PlanService {
@@ -164,36 +193,22 @@ export class PlanService {
     }
   }
 
+
   /**
    * Fetch library exercises with search, profile filter (tri-state), muscle, and pagination
    */
-  static async getLibraryExercises(params: {
-    profileId?: string;
-    search?: string;
-    muscle?: string;
-    equipment?: string;
-    hasVideo?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ exercises: Exercise[]; total: number }> {
+  static async getLibraryExercises(
+    params: LibraryQueryParams,
+  ): Promise<{ exercises: Exercise[]; total: number }> {
     try {
-      const query = new URLSearchParams();
-      if (params.profileId) query.set('profileId', params.profileId);
-      if (params.search) query.set('search', params.search);
-      if (params.muscle && params.muscle !== 'All') query.set('muscle', params.muscle);
-      if (params.equipment && params.equipment !== 'All') query.set('pairTag', params.equipment);
-      if (params.hasVideo && params.hasVideo !== 'all') query.set('hasVideo', params.hasVideo);
-      if (params.limit) query.set('limit', String(params.limit));
-      if (params.offset !== undefined) query.set('offset', String(params.offset));
-
-      const res = await fetch(`/api/exercises?${query.toString()}`);
+      const queryString = buildLibraryQuery(params);
+      const res = await fetch(`/api/exercises?${queryString}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.exercises)) {
-          return {
-            exercises: data.exercises.map(mapExerciseDto),
-            total: data.total ?? data.count ?? data.exercises.length,
-          };
+          const exercises = data.exercises.map(mapExerciseDto);
+          const total = data.total ?? data.count ?? exercises.length;
+          return { exercises, total };
         }
       }
     } catch (e) {
@@ -205,7 +220,10 @@ export class PlanService {
   /**
    * Resolve YouTube tutorial on-demand and persist to D1
    */
-  static async resolveYouTubeVideo(exerciseId: string, exerciseName: string): Promise<string | null> {
+  static async resolveYouTubeVideo(
+    exerciseId: string,
+    exerciseName: string,
+  ): Promise<string | null> {
     try {
       const res = await fetch('/api/exercises/resolve-video', {
         method: 'POST',
@@ -229,7 +247,7 @@ export class PlanService {
    */
   static async updateExerciseProfile(
     exerciseId: string,
-    profileId: 'person_1' | 'person_2' | null
+    profileId: 'person_1' | 'person_2' | null,
   ): Promise<boolean> {
     try {
       const res = await fetch(`/api/exercises/${encodeURIComponent(exerciseId)}`, {
@@ -284,7 +302,7 @@ export class PlanService {
    */
   static async saveProfiles(
     partner1: Partial<UserProfile>,
-    partner2: Partial<UserProfile>
+    partner2: Partial<UserProfile>,
   ): Promise<UserProfile[]> {
     const res = await fetch('/api/profiles', {
       method: 'POST',

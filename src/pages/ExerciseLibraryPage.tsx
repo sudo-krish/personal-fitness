@@ -1,212 +1,305 @@
 import { useState } from 'react';
-import { useRouter } from '../router/Router';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { useExerciseCatalog } from '../hooks/useExerciseCatalog';
-import { ExerciseSearchBar } from '../features/library/ExerciseSearchBar';
-import { ExerciseFilterBar } from '../features/library/ExerciseFilterBar';
-import { ExerciseCard } from '../features/library/ExerciseCard';
-import { VideoModal } from '../features/library/VideoModal';
+import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Sheet } from '../components/ui/Sheet';
+import { CropMarks } from '../components/art/CropMarks';
+import { ExerciseThumb } from '../components/ui/ExerciseThumb';
 import { Exercise } from '../types/workout';
-import { ArrowLeft, Sun, Moon, Sparkles, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, X, Play, Loader2, Dumbbell, Sparkles } from 'lucide-react';
+import { haptics } from '../lib/haptics';
 
 interface ExerciseLibraryPageProps {
   onOpenVideo?: (url: string, title: string) => void;
 }
 
-export function ExerciseLibraryPage({ onOpenVideo: onGlobalOpenVideo }: ExerciseLibraryPageProps) {
-  const { navigate } = useRouter();
-  const { user, partner } = useAuth();
-  const { resolvedTheme, toggleTheme } = useTheme();
+const MUSCLE_CHIPS = [
+  'All',
+  'Chest',
+  'Back',
+  'Quads',
+  'Hamstrings',
+  'Glutes',
+  'Shoulders',
+  'Biceps',
+  'Triceps',
+  'Core',
+];
 
-  const isUserPrimary = user?.isPrimary ?? true;
-  const partner1 = isUserPrimary ? user : partner;
-  const partner2 = isUserPrimary ? partner : user;
-  const p1Name = partner1?.name || 'Partner 1';
-  const p2Name = partner2?.name || 'Partner 2';
+export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
+  const { user, partner } = useAuth();
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
 
   const {
     search,
     setSearch,
     selectedMuscle,
     setSelectedMuscle,
-    selectedEquipment,
-    setSelectedEquipment,
-    selectedProfileTab,
-    setSelectedProfileTab,
-    videoFilter,
-    setVideoFilter,
+    exercises,
+    isLoading,
+    totalCount,
     page,
     setPage,
     totalPages,
-    totalCount,
-    exercises,
-    isLoading,
-    resolvingVideoId,
-    actionNotice,
     assignProfile,
-    resolveVideo,
-    updateVideoUrl,
+    actionNotice,
   } = useExerciseCatalog(36);
 
-  // Active Video Modal
-  const [activeVideoEx, setActiveVideoEx] = useState<Exercise | null>(null);
-
-  const handleOpenVideo = (url: string, title: string, exercise?: Exercise) => {
-    if (onGlobalOpenVideo) {
-      onGlobalOpenVideo(url, title);
-    } else if (exercise) {
-      setActiveVideoEx(exercise);
-    }
-  };
+  const isPrimary = user?.isPrimary ?? true;
+  const p1Name = isPrimary ? user?.name || 'Partner 1' : partner?.name || 'Partner 1';
+  const p2Name = isPrimary ? partner?.name || 'Partner 2' : user?.name || 'Partner 2';
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 pb-32 flex flex-col gap-6">
+    <div className="w-full max-w-[560px] sm:max-w-[760px] mx-auto px-5 pt-6 pb-36 animate-rise flex flex-col gap-5">
       {/* Toast Notice */}
       {actionNotice && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 dark:bg-slate-800/95 border border-sky-500/40 text-sky-200 px-5 py-2.5 rounded-full shadow-2xl backdrop-blur-md text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-150">
-          <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 glass-strong text-ink px-4 py-2 rounded-full shadow-float text-xs font-semibold flex items-center gap-2 animate-rise">
+          <Sparkles className="size-3.5 text-sage-500" />
           <span>{actionNotice}</span>
         </div>
       )}
 
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-slate-800/80">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/')}
-            leftIcon={<ArrowLeft size={16} />}
-          >
-            Workout
-          </Button>
-
-          <div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Exercise Library
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Browse, filter, and assign exercises to duo partners.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-            aria-label="Toggle theme"
-          >
-            {resolvedTheme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-          </button>
+      {/* L1: FROSTED SEARCH PILL (First element, no top header) */}
+      <div className="relative w-full">
+        <div className="glass rounded-full flex items-center px-4 py-3 gap-3 focus-within:ring-2 focus-within:ring-sage-500 transition-all">
+          <Search size={18} className="text-ink-muted shrink-0" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search exercises by name, equipment, muscle..."
+            className="w-full bg-transparent border-0 outline-none text-sm text-ink placeholder:text-ink-muted"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="text-ink-muted hover:text-ink cursor-pointer p-0.5"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Search Bar */}
-      <ExerciseSearchBar
-        value={search}
-        onChange={setSearch}
-        totalCount={totalCount}
-      />
+      {/* L2: MUSCLE FILTER CHIPS */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none select-none">
+        {MUSCLE_CHIPS.map((muscle) => {
+          const isActive = selectedMuscle === muscle;
+          return (
+            <button
+              key={muscle}
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                setSelectedMuscle(muscle);
+              }}
+              className={`px-4 py-2 rounded-full text-xs font-semibold shrink-0 cursor-pointer transition-all ${
+                isActive
+                  ? 'bg-sage-100 text-sage-700 ring-1 ring-sage-500 shadow-xs'
+                  : 'glass text-ink-muted hover:text-ink'
+              }`}
+            >
+              {muscle}
+            </button>
+          );
+        })}
+      </div>
 
-      {/* Filter Bar */}
-      <ExerciseFilterBar
-        p1Name={p1Name}
-        p2Name={p2Name}
-        selectedProfileTab={selectedProfileTab}
-        onProfileTabChange={setSelectedProfileTab}
-        selectedMuscle={selectedMuscle}
-        onMuscleChange={setSelectedMuscle}
-        selectedEquipment={selectedEquipment}
-        onEquipmentChange={setSelectedEquipment}
-        videoFilter={videoFilter}
-        onVideoFilterChange={setVideoFilter}
-      />
+      {/* L3: META LINE */}
+      <div className="flex items-center justify-between text-xs text-ink-muted px-1 font-medium">
+        <span>
+          {totalCount} exercises {selectedMuscle !== 'All' ? `in ${selectedMuscle}` : ''}
+        </span>
+        <span>A-Z Catalog</span>
+      </div>
 
-      {/* Exercise Grid */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center p-16 text-slate-400">
-          <Loader2 size={32} className="animate-spin text-sky-500 mb-3" />
-          <span className="text-sm font-medium">Loading exercises...</span>
+      {/* L4: 2-COLUMN GRID OF 4:5 CARDS */}
+      {isLoading && exercises.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-ink-muted gap-3">
+          <Loader2 size={28} className="animate-spin text-sage-500" />
+          <span className="text-sm font-medium">Loading catalog...</span>
         </div>
       ) : exercises.length === 0 ? (
-        <div className="p-16 text-center rounded-3xl bg-slate-100/50 dark:bg-slate-900/50 border border-dashed border-slate-200 dark:border-slate-800">
-          <p className="text-base font-bold text-slate-700 dark:text-slate-300">
-            No exercises match your criteria
-          </p>
-          <p className="text-xs text-slate-400 mt-1">
-            Try adjusting your search query, muscle category, or equipment filter.
-          </p>
-        </div>
+        <Card variant="tinted" className="p-12 text-center flex flex-col items-center gap-3">
+          <Dumbbell size={28} className="text-sage-500/60" />
+          <h3 className="font-display text-lg font-medium text-ink">No Exercises Found</h3>
+          <p className="text-xs text-ink-muted">Try clearing your search query or choosing another muscle.</p>
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {exercises.map((ex) => (
-            <ExerciseCard
-              key={ex.id}
-              exercise={ex}
-              p1Name={p1Name}
-              p2Name={p2Name}
-              isResolvingVideo={resolvingVideoId === ex.id}
-              onAssignProfile={(profileId) =>
-                assignProfile(
-                  ex.id,
-                  profileId,
-                  profileId === 'person_1' ? p1Name : profileId === 'person_2' ? p2Name : undefined
-                )
-              }
-              onOpenVideo={(url, title) => handleOpenVideo(url, title, ex)}
-              onResolveVideo={() => resolveVideo(ex)}
-              onEditManualUrl={() => setActiveVideoEx(ex)}
-            />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+          {exercises.map((exercise) => (
+            <Card
+              key={exercise.id}
+              variant="plain"
+              className="group relative p-2.5 flex flex-col justify-between gap-2.5 cursor-pointer hover:border-ink/20 transition-all"
+              onClick={() => {
+                haptics.tap();
+                setSelectedExercise(exercise);
+              }}
+            >
+              <div className="flex flex-col gap-2">
+                {/* 4:5 Media Thumbnail with CropMarks on hover */}
+                <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden bg-sunk">
+                  <ExerciseThumb exercise={exercise} className="size-full" />
+                  <CropMarks offset={4} length={10} className="text-ink/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                  {/* Play button overlay */}
+                  {exercise.videoUrl && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onOpenVideo) onOpenVideo(exercise.videoUrl!, exercise.name);
+                      }}
+                      className="absolute bottom-2 right-2 glass size-8 rounded-full flex items-center justify-center text-ink hover:bg-white active:scale-90 transition-all cursor-pointer shadow-xs"
+                      aria-label="Play video"
+                    >
+                      <Play size={11} className="fill-current ml-0.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Details */}
+                <div>
+                  <h4 className="text-[13px] font-semibold text-ink line-clamp-1 leading-snug">
+                    {exercise.name}
+                  </h4>
+                  <p className="text-[11px] text-ink-muted line-clamp-1 mt-0.5">
+                    {exercise.muscle}
+                  </p>
+                </div>
+              </div>
+
+              {/* Target / Assignment Pill */}
+              <div className="pt-2 border-t border-hairline flex items-center justify-between text-[10px] text-ink-muted font-mono">
+                <span>{exercise.targetSets}×{exercise.targetReps}</span>
+                {exercise.profileId === 'person_1' && (
+                  <span className="px-2 py-0.5 rounded-full bg-p1-tint text-p1-ink font-semibold font-sans">
+                    {p1Name.slice(0, 4)}
+                  </span>
+                )}
+                {exercise.profileId === 'person_2' && (
+                  <span className="px-2 py-0.5 rounded-full bg-p2-tint text-p2-ink font-semibold font-sans">
+                    {p2Name.slice(0, 4)}
+                  </span>
+                )}
+              </div>
+            </Card>
           ))}
         </div>
       )}
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3 pt-4">
+      {/* L5: LOAD MORE BUTTON */}
+      {page < totalPages - 1 && (
+        <div className="flex justify-center pt-2">
           <Button
-            variant="secondary"
-            size="sm"
-            disabled={page === 0}
-            onClick={() => setPage(page - 1)}
-            leftIcon={<ChevronLeft size={16} />}
-          >
-            Prev
-          </Button>
-
-          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 font-mono">
-            Page {page + 1} of {totalPages}
-          </span>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={page >= totalPages - 1}
+            variant="glass"
+            size="md"
+            isLoading={isLoading}
             onClick={() => setPage(page + 1)}
-            rightIcon={<ChevronRight size={16} />}
+            className="w-full max-w-xs"
           >
-            Next
+            Load More Exercises ({exercises.length} of {totalCount})
           </Button>
         </div>
       )}
 
-      {/* Video Modal */}
-      {activeVideoEx && (
-        <VideoModal
-          isOpen={Boolean(activeVideoEx)}
-          onClose={() => setActiveVideoEx(null)}
-          title={activeVideoEx.name}
-          videoUrl={activeVideoEx.videoUrl}
-          onSaveManualUrl={async (newUrl) => {
-            await updateVideoUrl(activeVideoEx.id, newUrl);
-            setActiveVideoEx((prev) => (prev ? { ...prev, videoUrl: newUrl } : null));
-          }}
-        />
-      )}
+      {/* L6: EXERCISE DETAIL BOTTOM SHEET */}
+      <Sheet
+        isOpen={Boolean(selectedExercise)}
+        onClose={() => setSelectedExercise(null)}
+        title={selectedExercise?.name}
+        tall
+      >
+        {selectedExercise && (
+          <div className="flex flex-col gap-5 pt-2">
+            {/* Image / Video Area */}
+            <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-sunk shadow-xs">
+              <ExerciseThumb exercise={selectedExercise} className="size-full" />
+              {selectedExercise.videoUrl && onOpenVideo && (
+                <button
+                  type="button"
+                  onClick={() => onOpenVideo(selectedExercise.videoUrl!, selectedExercise.name)}
+                  className="absolute inset-0 bg-ink/20 flex items-center justify-center text-surface hover:bg-ink/30 transition-colors cursor-pointer"
+                >
+                  <div className="glass-strong size-14 rounded-full flex items-center justify-center text-ink shadow-float">
+                    <Play size={20} className="fill-current ml-1" />
+                  </div>
+                </button>
+              )}
+            </div>
+
+            {/* Muscle & Target Tags */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-3 py-1 rounded-full bg-sage-100 text-sage-700 text-xs font-semibold">
+                {selectedExercise.muscle}
+              </span>
+              <span className="px-3 py-1 rounded-full glass text-ink text-xs font-semibold tabular-nums">
+                Target: {selectedExercise.targetSets} sets × {selectedExercise.targetReps}
+              </span>
+              {selectedExercise.targetRpe && (
+                <span className="px-3 py-1 rounded-full glass text-ink text-xs font-semibold">
+                  RPE {selectedExercise.targetRpe}
+                </span>
+              )}
+            </div>
+
+            {/* Notes / Technique instructions */}
+            {selectedExercise.notes && (
+              <div className="p-4 rounded-2xl bg-sunk text-xs text-ink leading-relaxed">
+                <span className="font-semibold block mb-1 text-ink-muted uppercase tracking-wider text-[10px]">
+                  Technique Cues
+                </span>
+                {selectedExercise.notes}
+              </div>
+            )}
+
+            {/* Duo Assignment Controls */}
+            <div className="flex flex-col gap-2 pt-2 border-t border-hairline">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+                Assign to Partner Split
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => assignProfile(selectedExercise.id, 'person_1', p1Name)}
+                  className={`p-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                    selectedExercise.profileId === 'person_1'
+                      ? 'bg-p1-tint text-p1-ink ring-2 ring-p1-ink'
+                      : 'glass text-ink hover:bg-white'
+                  }`}
+                >
+                  {p1Name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => assignProfile(selectedExercise.id, 'person_2', p2Name)}
+                  className={`p-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                    selectedExercise.profileId === 'person_2'
+                      ? 'bg-p2-tint text-p2-ink ring-2 ring-p2-ink'
+                      : 'glass text-ink hover:bg-white'
+                  }`}
+                >
+                  {p2Name}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => assignProfile(selectedExercise.id, null)}
+                  className={`p-2.5 rounded-2xl text-xs font-semibold transition-all cursor-pointer ${
+                    !selectedExercise.profileId
+                      ? 'bg-ink text-surface'
+                      : 'glass text-ink-muted hover:text-ink'
+                  }`}
+                >
+                  Unassigned
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Sheet>
     </div>
   );
 }
