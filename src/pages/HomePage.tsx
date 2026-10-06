@@ -95,7 +95,7 @@ export function HomePage({ onOpenVideo }: HomePageProps) {
   return (
     <div className="w-full max-w-[560px] mx-auto pb-32 animate-rise">
       {/* T1: DAY BANNER */}
-      <section className="relative w-full h-[48vh] min-h-[380px] max-h-[460px] overflow-hidden rounded-b-[36px] bg-canvas">
+      <section className="relative w-full h-[48vh] min-h-[380px] max-h-[460px] overflow-hidden bg-canvas">
         {/* Cover Photo */}
         <div className="absolute inset-0">
           <img
@@ -109,7 +109,8 @@ export function HomePage({ onOpenVideo }: HomePageProps) {
           <CropMarks offset={10} length={16} className="text-white/40" />
 
           {/* Smooth gradient fade into canvas */}
-          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/50 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-canvas to-transparent" />
         </div>
 
         {/* Date Chip & Controls */}
