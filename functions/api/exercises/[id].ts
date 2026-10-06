@@ -37,11 +37,16 @@ export const onRequestPut = async (context: {
     if (updates.targetRpe !== undefined) patch.targetRpe = String(updates.targetRpe);
     if (updates.notes !== undefined) patch.notes = updates.notes;
     if (updates.videoUrl !== undefined) patch.videoUrl = updates.videoUrl;
+    if (updates.profileId !== undefined) {
+      patch.profileId = updates.profileId === 'null' || updates.profileId === null ? null : String(updates.profileId);
+    } else if (updates.profile_id !== undefined) {
+      patch.profileId = updates.profile_id === 'null' || updates.profile_id === null ? null : String(updates.profile_id);
+    }
 
     await db.update(schema.exercises).set(patch).where(eq(schema.exercises.id, id));
 
     return new Response(
-      JSON.stringify({ success: true, id }),
+      JSON.stringify({ success: true, id, patch }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
@@ -52,6 +57,8 @@ export const onRequestPut = async (context: {
     );
   }
 };
+
+export const onRequestPatch = onRequestPut;
 
 export const onRequestDelete = async (context: {
   params: { id: string };
