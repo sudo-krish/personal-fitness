@@ -20,7 +20,7 @@ export function ExerciseThumb({ exercise, className = '' }: ExerciseThumbProps) 
           alt=""
           loading="lazy"
           onError={() => setFailed(true)}
-          className="h-full w-full object-cover mix-blend-multiply"
+          className="h-full w-full object-cover transition-opacity duration-200"
           draggable={false}
         />
       ) : (

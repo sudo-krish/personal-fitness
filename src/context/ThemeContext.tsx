@@ -40,6 +40,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       const activeResolved = currentTheme === 'system' ? getSystemTheme() : currentTheme;
       setResolvedTheme(activeResolved);
       root.setAttribute('data-theme', activeResolved);
+      root.classList.toggle('dark', activeResolved === 'dark');
     };
 
     applyTheme(theme);

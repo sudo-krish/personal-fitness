@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Sheet } from '../components/ui/Sheet';
@@ -12,6 +13,7 @@ import { RefreshCw, LogOut, Sparkles } from 'lucide-react';
 
 export function SettingsPage() {
   const { user, partner, logout, refreshSession } = useAuth();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const isPrimary = user?.isPrimary ?? true;
 
   const [editingProfile, setEditingProfile] = useState<UserProfile | null>(null);
@@ -148,6 +150,35 @@ export function SettingsPage() {
       </div>
 
       {/* ST3: GROUPED SECTIONS */}
+      {/* APPEARANCE SECTION */}
+      <div>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted px-1 block mb-2">
+          Appearance & Theme
+        </span>
+        <Card variant="plain" className="p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-semibold text-ink">Color Scheme</h4>
+              <p className="text-xs text-ink-muted mt-0.5">
+                Current mode: <span className="capitalize font-semibold text-ink">{resolvedTheme === 'dark' ? 'OLED Dark' : 'Porcelain Light'}</span>
+              </p>
+            </div>
+          </div>
+          <Segmented
+            label="Theme Selection"
+            value={theme}
+            onChange={(val) => {
+              haptics.tap();
+              setTheme(val as 'light' | 'dark' | 'system');
+            }}
+            options={[
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+              { value: 'system', label: 'System' },
+            ]}
+          />
+        </Card>
+      </div>
 
       {/* PLAN SECTION */}
       <div>

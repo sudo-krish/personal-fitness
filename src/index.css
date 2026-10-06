@@ -1,9 +1,12 @@
 @import "tailwindcss";
 
-/* Sage & Porcelain — light-only design system (spec v2, §1) */
-@theme {
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *, .dark, .dark *));
+
+/* Sage & Porcelain — Duo design system (Light & OLED Dark) */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
 
   --color-canvas: #f5f7f2;
   --color-surface: #ffffff;
@@ -28,10 +31,88 @@
   --color-butter: #f3ebc9;
   --color-clay: #a4513f;
 
-  --radius-card: 28px;
-
   --shadow-card: 0 1px 2px rgb(31 42 33 / 0.04), 0 12px 32px -12px rgb(31 42 33 / 0.1);
   --shadow-float: 0 18px 40px -16px rgb(31 42 33 / 0.28);
+
+  --glass-bg: rgb(255 255 255 / 0.55);
+  --glass-border: rgb(255 255 255 / 0.7);
+  --glass-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 6px 20px -8px rgb(31 42 33 / 0.18);
+
+  --glass-strong-bg: rgb(255 255 255 / 0.72);
+  --glass-strong-border: rgb(255 255 255 / 0.8);
+  --glass-strong-shadow: inset 0 1px 0 rgb(255 255 255 / 0.95), 0 18px 40px -16px rgb(31 42 33 / 0.28);
+}
+
+:root[data-theme='dark'],
+.dark {
+  color-scheme: dark;
+
+  --color-canvas: #0b110d;
+  --color-surface: #131c15;
+  --color-sunk: #0f1711;
+
+  --color-sage-50: #162419;
+  --color-sage-100: #1f3323;
+  --color-sage-200: #2d4a33;
+  --color-sage-300: #416b49;
+  --color-sage-500: #689e57;
+  --color-sage-700: #88be76;
+
+  --color-ink: #f0f5ed;
+  --color-ink-muted: #95a396;
+  --color-hairline: rgb(255 255 255 / 0.08);
+
+  --color-p1-tint: #132731;
+  --color-p1-ink: #72b7d4;
+  --color-p2-tint: #311c19;
+  --color-p2-ink: #e89582;
+
+  --color-butter: #2a2615;
+  --color-clay: #c9624f;
+
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35), 0 12px 32px -12px rgb(0 0 0 / 0.55);
+  --shadow-float: 0 18px 40px -16px rgb(0 0 0 / 0.65);
+
+  --glass-bg: rgb(19 28 21 / 0.65);
+  --glass-border: rgb(255 255 255 / 0.12);
+  --glass-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 6px 20px -8px rgb(0 0 0 / 0.45);
+
+  --glass-strong-bg: rgb(19 28 21 / 0.82);
+  --glass-strong-border: rgb(255 255 255 / 0.16);
+  --glass-strong-shadow: inset 0 1px 0 rgb(255 255 255 / 0.15), 0 18px 40px -16px rgb(0 0 0 / 0.6);
+}
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+
+  --color-canvas: var(--color-canvas);
+  --color-surface: var(--color-surface);
+  --color-sunk: var(--color-sunk);
+
+  --color-sage-50: var(--color-sage-50);
+  --color-sage-100: var(--color-sage-100);
+  --color-sage-200: var(--color-sage-200);
+  --color-sage-300: var(--color-sage-300);
+  --color-sage-500: var(--color-sage-500);
+  --color-sage-700: var(--color-sage-700);
+
+  --color-ink: var(--color-ink);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-hairline: var(--color-hairline);
+
+  --color-p1-tint: var(--color-p1-tint);
+  --color-p1-ink: var(--color-p1-ink);
+  --color-p2-tint: var(--color-p2-tint);
+  --color-p2-ink: var(--color-p2-ink);
+
+  --color-butter: var(--color-butter);
+  --color-clay: var(--color-clay);
+
+  --radius-card: 28px;
+
+  --shadow-card: var(--shadow-card);
+  --shadow-float: var(--shadow-float);
 
   --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 
@@ -59,25 +140,21 @@
   }
 }
 
-/* Frosted glass — buttons and controls only (spec §1.4) */
+/* Frosted glass — adaptive glass styling */
 @utility glass {
-  background-color: rgb(255 255 255 / 0.55);
+  background-color: var(--glass-bg);
   -webkit-backdrop-filter: blur(18px) saturate(140%);
   backdrop-filter: blur(18px) saturate(140%);
-  border: 1px solid rgb(255 255 255 / 0.7);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.9),
-    0 6px 20px -8px rgb(31 42 33 / 0.18);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 @utility glass-strong {
-  background-color: rgb(255 255 255 / 0.72);
+  background-color: var(--glass-strong-bg);
   -webkit-backdrop-filter: blur(24px) saturate(150%);
   backdrop-filter: blur(24px) saturate(150%);
-  border: 1px solid rgb(255 255 255 / 0.8);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.95),
-    0 18px 40px -16px rgb(31 42 33 / 0.28);
+  border: 1px solid var(--glass-strong-border);
+  box-shadow: var(--glass-strong-shadow);
 }
 
 @utility scrollbar-none {
@@ -88,12 +165,6 @@
 }
 
 @layer base {
-  :root {
-    --safe-top: env(safe-area-inset-top, 0px);
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
-    color-scheme: light;
-  }
-
   * {
     -webkit-tap-highlight-color: transparent;
   }
@@ -109,9 +180,10 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    transition: background-color 280ms var(--ease-soft), color 280ms var(--ease-soft);
   }
 
-  /* Paper grain (spec §1.5) — 2.5% noise so the canvas reads as paper */
+  /* Paper grain — subtle organic texture */
   body::before {
     content: '';
     position: fixed;
@@ -120,6 +192,11 @@
     z-index: 0;
     opacity: 0.025;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  :root[data-theme='dark'] body::before,
+  .dark body::before {
+    opacity: 0.018;
   }
 
   #root {

@@ -11,6 +11,7 @@ import { CropMarks } from '../components/art/CropMarks';
 import { Swash } from '../components/art/Swash';
 import { Ring } from '../components/art/Ring';
 import { ExerciseThumb } from '../components/ui/ExerciseThumb';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { getSplitCoverPath } from '../lib/assetsMap';
 import { Play, Dumbbell, Check } from 'lucide-react';
 import { PlanService } from '../services/planService';
@@ -94,7 +95,7 @@ export function HomePage({ onOpenVideo }: HomePageProps) {
   return (
     <div className="w-full max-w-[560px] mx-auto pb-32 animate-rise">
       {/* T1: DAY BANNER */}
-      <section className="relative w-full h-[48vh] min-h-[380px] max-h-[460px] overflow-hidden rounded-b-[36px] bg-canvas">
+      <section className="relative w-full h-[48vh] min-h-[380px] max-h-[460px] overflow-hidden bg-canvas">
         {/* Cover Photo */}
         <div className="absolute inset-0">
           <img
@@ -108,27 +109,31 @@ export function HomePage({ onOpenVideo }: HomePageProps) {
           <CropMarks offset={10} length={16} className="text-white/40" />
 
           {/* Smooth gradient fade into canvas */}
-          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-canvas via-canvas/50 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-canvas to-transparent" />
         </div>
 
-        {/* Date Chip & Back to Today Chip */}
+        {/* Date Chip & Controls */}
         <div className="absolute top-6 left-6 right-6 flex items-center justify-between z-10">
           <span className="glass px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide text-ink">
             {currentSchedule.name} • {selectedDayKey.toUpperCase().slice(0, 3)}
           </span>
 
-          {isOffDay && (
-            <button
-              type="button"
-              onClick={() => {
-                haptics.tap();
-                setSelectedDayKey(todayKey);
-              }}
-              className="glass px-3 py-1.5 rounded-full text-xs font-medium text-ink hover:bg-white/80 active:scale-95 transition-all cursor-pointer"
-            >
-              Back to Today ↺
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {isOffDay && (
+              <button
+                type="button"
+                onClick={() => {
+                  haptics.tap();
+                  setSelectedDayKey(todayKey);
+                }}
+                className="glass px-3 py-1.5 rounded-full text-xs font-medium text-ink hover:bg-white/80 active:scale-95 transition-all cursor-pointer"
+              >
+                Back to Today ↺
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Banner Title & Muscles */}

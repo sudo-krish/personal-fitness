@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Sheet } from '../components/ui/Sheet';
 import { CropMarks } from '../components/art/CropMarks';
 import { ExerciseThumb } from '../components/ui/ExerciseThumb';
+import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { Exercise } from '../types/workout';
 import { Search, X, Play, Loader2, Dumbbell, Sparkles } from 'lucide-react';
 import { haptics } from '../lib/haptics';
@@ -60,9 +61,10 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
         </div>
       )}
 
-      {/* L1: FROSTED SEARCH PILL (First element, no top header) */}
-      <div className="relative w-full">
-        <div className="glass rounded-full flex items-center px-4 py-3 gap-3 focus-within:ring-2 focus-within:ring-sage-500 transition-all">
+      {/* L1: FROSTED SEARCH PILL WITH THEME TOGGLE */}
+      <div className="flex items-center gap-2.5 w-full">
+        <div className="relative flex-1">
+          <div className="glass rounded-full flex items-center px-4 py-3 gap-3 focus-within:ring-2 focus-within:ring-sage-500 transition-all">
           <Search size={18} className="text-ink-muted shrink-0" />
           <input
             type="text"
@@ -80,7 +82,9 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
               <X size={16} />
             </button>
           )}
+          </div>
         </div>
+        <ThemeToggle />
       </div>
 
       {/* L2: MUSCLE FILTER CHIPS */}
@@ -133,17 +137,17 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
             <Card
               key={exercise.id}
               variant="plain"
-              className="group relative p-2.5 flex flex-col justify-between gap-2.5 cursor-pointer hover:border-ink/20 transition-all"
+              className="group relative p-3 flex flex-col justify-between gap-3 cursor-pointer hover:border-ink/20 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 bg-surface/40"
               onClick={() => {
                 haptics.tap();
                 setSelectedExercise(exercise);
               }}
             >
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5">
                 {/* 4:5 Media Thumbnail with CropMarks on hover */}
-                <div className="relative aspect-[4/5] w-full rounded-2xl overflow-hidden bg-sunk">
+                <div className="relative aspect-[4/5] w-full rounded-[14px] overflow-hidden bg-sunk ring-1 ring-inset ring-ink/5">
                   <ExerciseThumb exercise={exercise} className="size-full" />
-                  <CropMarks offset={4} length={10} className="text-ink/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <CropMarks offset={6} length={12} className="text-white/40 opacity-0 group-hover:opacity-100 transition-opacity" />
 
                   {/* Play button overlay */}
                   {exercise.videoUrl && (
@@ -162,19 +166,19 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
                 </div>
 
                 {/* Details */}
-                <div>
-                  <h4 className="text-[13px] font-semibold text-ink line-clamp-1 leading-snug">
+                <div className="px-0.5">
+                  <h4 className="text-sm font-semibold text-ink line-clamp-1 leading-snug group-hover:text-sage-600 transition-colors">
                     {exercise.name}
                   </h4>
-                  <p className="text-[11px] text-ink-muted line-clamp-1 mt-0.5">
+                  <p className="text-[11px] text-ink-muted line-clamp-1 mt-0.5 font-medium">
                     {exercise.muscle}
                   </p>
                 </div>
               </div>
 
               {/* Target / Assignment Pill */}
-              <div className="pt-2 border-t border-hairline flex items-center justify-between text-[10px] text-ink-muted font-mono">
-                <span>{exercise.targetSets}×{exercise.targetReps}</span>
+              <div className="pt-2.5 border-t border-hairline flex items-center justify-between text-[11px] text-ink-muted font-mono px-0.5">
+                <span className="font-semibold tracking-tight">{exercise.targetSets}×{exercise.targetReps}</span>
                 {exercise.profileId === 'person_1' && (
                   <span className="px-2 py-0.5 rounded-full bg-p1-tint text-p1-ink font-semibold font-sans">
                     {p1Name.slice(0, 4)}
