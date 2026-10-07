@@ -4,9 +4,8 @@ import { AppRoute } from '../router/routes';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { UnderlineField } from '../components/ui/UnderlineField';
-import { ArchFrame } from '../components/art/ArchFrame';
+import { AuthShell } from '../components/shell/AuthShell';
 import { Swash } from '../components/art/Swash';
-import { Contours } from '../components/art/Contours';
 import { AlertCircle, Clock } from 'lucide-react';
 
 interface LoginPageProps {
@@ -21,6 +20,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [idleNotice, setIdleNotice] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ username?: string; password?: string }>({});
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -31,10 +31,12 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!username.trim() || !password.trim()) {
-      setError('Please provide your username and password.');
-      return;
-    }
+    const nextErrors = {
+      username: username.trim() ? undefined : 'Enter your username',
+      password: password.trim() ? undefined : 'Enter your password',
+    };
+    setFieldErrors(nextErrors);
+    if (nextErrors.username || nextErrors.password) return;
 
     setLoading(true);
     setError(null);
@@ -51,27 +53,14 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-canvas flex flex-col items-center justify-center p-5 relative overflow-hidden animate-rise">
-      <Contours seed="login" lines={6} drift className="text-ink/5" />
-
-      <div className="relative z-10 w-full max-w-[420px] flex flex-col items-center">
-        {/* ARCH PHOTO FRAME */}
-        <div className="mb-6 flex justify-center">
-          <ArchFrame
-            src="/assets/partner-training.jpg"
-            alt="Duo Training"
-            className="w-36 h-48 shadow-card"
-          />
-        </div>
-
+    <AuthShell>
+      <div className="flex flex-col">
         {/* HEADLINE */}
-        <div className="text-center mb-6">
-          <h1 className="font-display text-3xl font-medium text-ink leading-tight">
+        <div className="mb-6">
+          <h1 className="font-display text-4xl font-medium text-ink leading-tight">
             Welcome <Swash>back</Swash>
           </h1>
-          <p className="text-xs text-ink-muted mt-1">
-            Sign in to continue your synchronized partner workouts.
-          </p>
+          <p className="text-sm text-ink-muted mt-1.5">Pick up where the two of you left off.</p>
         </div>
 
         {/* TIMEOUT NOTICE */}
@@ -91,14 +80,19 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
         )}
 
         {/* FORM CARD */}
-        <Card variant="plain" className="w-full p-6 sm:p-8 shadow-card">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <Card variant="plain" className="w-full p-6 sm:p-8 shadow-float glass-strong">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
             <UnderlineField
               label="Username"
               type="text"
               autoComplete="username"
+              autoCapitalize="none"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                if (fieldErrors.username) setFieldErrors((f) => ({ ...f, username: undefined }));
+              }}
+              error={fieldErrors.username}
               disabled={loading}
               required
               autoFocus
@@ -109,7 +103,11 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
               type="password"
               autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) setFieldErrors((f) => ({ ...f, password: undefined }));
+              }}
+              error={fieldErrors.password}
               disabled={loading}
               required
             />
@@ -121,7 +119,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
               isLoading={loading}
               className="w-full mt-2"
             >
-              Sign In to Session
+              Sign in
             </Button>
           </form>
 
@@ -140,6 +138,6 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
           </div>
         </Card>
       </div>
-    </div>
+    </AuthShell>
   );
 }

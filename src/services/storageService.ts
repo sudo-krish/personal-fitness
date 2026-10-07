@@ -186,6 +186,45 @@ export class StorageService {
   }
 
   /**
+   * Resolve a weekday key to its calendar date (YYYY-MM-DD) within the
+   * Monday-start week containing `ref`.
+   * @param dayKey - 'monday' … 'sunday'
+   * @param ref - Reference date, defaults to now
+   */
+  static getDateForDayKey(dayKey: string, ref: Date = new Date()): string {
+    const order = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const targetIdx = Math.max(0, order.indexOf(dayKey));
+    const refIdx = (ref.getDay() + 6) % 7;
+    const d = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() + (targetIdx - refIdx));
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${month}-${day}`;
+  }
+
+  /**
+   * Read every persisted day log for a profile without creating new ones.
+   * @param profileId - 'person_1' | 'person_2'
+   */
+  static listDayLogs(profileId: string): WorkoutDayLog[] {
+    const prefix = `${STORAGE_KEYS.WORKOUT_LOGS}_${profileId}_`;
+    const logs: WorkoutDayLog[] = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || !k.startsWith(prefix)) continue;
+        const raw = localStorage.getItem(k);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw) as WorkoutDayLog;
+        if (parsed && typeof parsed.dateStr === 'string' && parsed.exercisesProgress)
+          logs.push(parsed);
+      }
+    } catch {
+      // Corrupt entries are skipped
+    }
+    return logs.sort((a, b) => a.dateStr.localeCompare(b.dateStr));
+  }
+
+  /**
    * Load workout log for given profile and date
    */
   static getDayLog(profileId: string, dateStr: string, dayKey: string): WorkoutDayLog {
@@ -384,8 +423,8 @@ export class StorageService {
 
     return {
       profileId,
-      currentStreak: 1, // Start with encouraging streak
-      longestStreak: 3,
+      currentStreak: 0,
+      longestStreak: 0,
       totalWorkoutsCompleted: 0,
       totalSetsCompleted: 0,
     };
