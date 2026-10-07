@@ -130,7 +130,7 @@ async function main() {
 
   sqlStatements.push(``, `COMMIT;`, ``);
 
-  const outFilePath = path.join(ROOT_DIR, 'migrations', 'seed_exercise_library.sql');
+  const outFilePath = path.join(ROOT_DIR, 'data', 'seed_exercise_library.sql');
   fs.writeFileSync(outFilePath, sqlStatements.join('\n'), 'utf8');
   console.log(`[Ingest] Successfully wrote ${rawList.length} SQL insert statements to: ${outFilePath}`);
 
@@ -147,8 +147,8 @@ async function main() {
     }
   } else {
     console.log(`\nTo execute against D1, run:`);
-    console.log(`  npx wrangler d1 execute ${DB_NAME} --remote --file=migrations/seed_exercise_library.sql -y`);
-    console.log(`  npx wrangler d1 execute ${DB_NAME} --local --file=migrations/seed_exercise_library.sql -y`);
+    console.log(`  npx wrangler d1 execute ${DB_NAME} --remote --file=data/seed_exercise_library.sql -y`);
+    console.log(`  npx wrangler d1 execute ${DB_NAME} --local --file=data/seed_exercise_library.sql -y`);
   }
 }
 
