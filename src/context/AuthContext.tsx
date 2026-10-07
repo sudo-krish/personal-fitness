@@ -1,6 +1,7 @@
 import { createContext, use, useState, useEffect, type ReactNode } from 'react';
 import { UserProfile } from '../types/workout';
 import { useInactivityTimeout } from '../hooks/useInactivityTimeout';
+import { StorageService } from '../services/storageService';
 
 export interface DuoRegisterPayload {
   primary: {
@@ -121,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPartner(null);
     setToken(null);
     setActiveProfileId('person_1');
+    StorageService.clearSelectedDayKey();
 
     const search = options?.reason ? `?reason=${encodeURIComponent(options.reason)}` : '';
     if (window.location.pathname !== '/login') {
@@ -160,6 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPartner(data.partner);
       setToken(data.token);
       setActiveProfileId(data.user.id);
+      StorageService.clearSelectedDayKey();
       return { success: true };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Login failed. Network error.';

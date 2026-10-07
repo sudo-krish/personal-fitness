@@ -91,8 +91,6 @@ async function main() {
     `-- profile_id is NULL (unassigned by default)`,
     `-- video_url is NULL (resolved on-demand)`,
     ``,
-    `BEGIN TRANSACTION;`,
-    ``,
   ];
 
   rawList.forEach((item, index) => {
@@ -128,7 +126,7 @@ async function main() {
     );
   });
 
-  sqlStatements.push(``, `COMMIT;`, ``);
+  sqlStatements.push(``);
 
   const outFilePath = path.join(ROOT_DIR, 'data', 'seed_exercise_library.sql');
   fs.writeFileSync(outFilePath, sqlStatements.join('\n'), 'utf8');

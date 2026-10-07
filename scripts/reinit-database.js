@@ -92,8 +92,6 @@ async function main() {
     `-- ==============================================================================`,
     `PRAGMA foreign_keys = OFF;`,
     ``,
-    `BEGIN TRANSACTION;`,
-    ``,
     `-- Drop existing tables to guarantee pristine schema`,
     `DROP TABLE IF EXISTS set_logs;`,
     `DROP TABLE IF EXISTS user_streaks;`,
@@ -212,8 +210,6 @@ async function main() {
   });
 
   sqlStatements.push(
-    ``,
-    `COMMIT;`,
     ``,
     `PRAGMA foreign_keys = ON;`,
     ``

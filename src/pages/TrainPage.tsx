@@ -9,6 +9,7 @@ import { Segmented } from '../components/ui/Segmented';
 import { RestTimerHUD } from '../features/workout/RestTimerHUD';
 import { ExerciseRow } from '../features/workout/ExerciseRow';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
+import { WeekThread } from '../components/art/WeekThread';
 import { getSplitCoverPath } from '../lib/assetsMap';
 import { DAY_SCHEDULES } from '../data/initialWorkoutPlan';
 import { StorageService } from '../services/storageService';
@@ -39,6 +40,7 @@ export function TrainPage({ onOpenVideo }: TrainPageProps) {
     p1Name,
     p2Name,
     myRole,
+    todayKey,
     selectedDayKey,
     selectedDateStr,
     setSelectedDayKey,
@@ -48,6 +50,7 @@ export function TrainPage({ onOpenVideo }: TrainPageProps) {
     p1DayLog,
     p2DayLog,
     updateSet,
+    dayCompletionStatus,
   } = useWorkoutSession({ user, partner, onStartRest: () => startRestTimer(60) });
 
   const [mode, setMode] = useState<'together' | 'solo'>(partner ? 'together' : 'solo');
@@ -172,7 +175,20 @@ export function TrainPage({ onOpenVideo }: TrainPageProps) {
           draggable={false}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/30 to-ink/10" />
-        <div className="absolute top-3 right-3 z-10">
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+          {selectedDayKey !== todayKey && (
+            <button
+              type="button"
+              onClick={() => {
+                haptics.tap();
+                setSelectedDayKey(todayKey);
+                setFocusKey(null);
+              }}
+              className="glass h-8 px-3 rounded-full text-xs font-semibold text-white active:scale-95 transition cursor-pointer"
+            >
+              Today ↺
+            </button>
+          )}
           <ThemeToggle />
         </div>
         <div className="absolute inset-x-0 bottom-0 p-4 flex items-end justify-between gap-3 z-10">
@@ -187,6 +203,7 @@ export function TrainPage({ onOpenVideo }: TrainPageProps) {
           <div className="text-center text-white min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/75">
               {currentSchedule.name}
+              {selectedDayKey === todayKey ? ' · Today' : ''}
             </p>
             <h1 className="font-display text-2xl font-medium leading-tight truncate">
               {currentSchedule.splitTitle.split('(')[0]?.trim()}
@@ -202,6 +219,19 @@ export function TrainPage({ onOpenVideo }: TrainPageProps) {
           </button>
         </div>
       </header>
+
+      {/* Week Day Thread */}
+      <div className="mb-3">
+        <WeekThread
+          selectedDayKey={selectedDayKey}
+          todayKey={todayKey}
+          completionStatus={dayCompletionStatus}
+          onSelectDay={day => {
+            setSelectedDayKey(day);
+            setFocusKey(null);
+          }}
+        />
+      </div>
 
       {/* Mode + progress */}
       {!currentSchedule.isRest && orderedRows.length > 0 && (
@@ -248,9 +278,9 @@ export function TrainPage({ onOpenVideo }: TrainPageProps) {
             <Leaf size={22} />
           </span>
           <h2 className="font-display text-xl font-medium text-ink">Scheduled rest day</h2>
-          <p className="text-xs text-ink-muted max-w-xs">Recovery is part of the program. Use the arrows to log ahead.</p>
+          <p className="text-xs text-ink-muted max-w-xs">Recovery is part of the program. Tap any training day above or use arrows to view or log exercises.</p>
           <Button variant="glass" size="sm" onClick={() => navigate('/')}>
-            Back to today
+            View recovery on Home
           </Button>
         </Card>
       ) : orderedRows.length === 0 ? (

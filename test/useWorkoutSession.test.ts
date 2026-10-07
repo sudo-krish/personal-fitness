@@ -158,18 +158,19 @@ describe('useWorkoutSession', () => {
     sessionRerender.reloadPlan();
   });
 
-  it('handles sunday fallback, non-primary partner, and remote hydrate', async () => {
+  it('preserves current calendar day (sunday / wednesday) without forced monday fallback', async () => {
     vi.spyOn(StorageService, 'getTodayDayKey').mockReturnValue('sunday');
     vi.spyOn(StorageService, 'getActiveProfileId').mockReturnValue('person_2');
+    vi.spyOn(StorageService, 'getSelectedDayKey').mockReturnValue(null);
 
     const remoteLog = {
       profileId: 'person_2',
-      dateStr: '2026-10-06',
-      dayKey: 'monday',
+      dateStr: '2026-10-11',
+      dayKey: 'sunday',
       exercisesProgress: {},
       completedPercentage: 0,
       isWorkoutFinished: false,
-      updatedAt: '2026-10-06T00:00:00.000Z',
+      updatedAt: '2026-10-11T00:00:00.000Z',
     };
     vi.spyOn(StorageService, 'fetchRemoteDayLog').mockResolvedValue(remoteLog);
 
@@ -189,12 +190,63 @@ describe('useWorkoutSession', () => {
       partner: mockPartner,
     });
 
-    expect(session.selectedDayKey).toBe('monday');
+    expect(session.selectedDayKey).toBe('sunday');
     expect(session.activeProfileId).toBe('person_2');
 
     if (effectCallback) {
       (effectCallback as () => () => void)();
       await Promise.resolve();
     }
+  });
+
+  it('resolves wednesday on login when today is wednesday and allows day switching', () => {
+    vi.spyOn(StorageService, 'getTodayDayKey').mockReturnValue('wednesday');
+    vi.spyOn(StorageService, 'getSelectedDayKey').mockReturnValue(null);
+    const setStoredDaySpy = vi.spyOn(StorageService, 'setSelectedDayKey');
+
+    const states = new Map<number, unknown>();
+    const setters = new Map<number, (val: unknown) => void>();
+    let stateIndex = 0;
+
+    internals.H = {
+      useState: vi.fn((initial: unknown) => {
+        const id = ++stateIndex;
+        if (!states.has(id)) {
+          const val = typeof initial === 'function' ? (initial as () => unknown)() : initial;
+          states.set(id, val);
+          setters.set(
+            id,
+            vi.fn((newVal: unknown) => {
+              const resolved =
+                typeof newVal === 'function'
+                  ? (newVal as (prev: unknown) => unknown)(states.get(id))
+                  : newVal;
+              states.set(id, resolved);
+            }),
+          );
+        }
+        return [states.get(id), setters.get(id)];
+      }),
+      useEffect: vi.fn(),
+    };
+
+    const session = useWorkoutSession({
+      user: mockUser,
+      partner: mockPartner,
+    });
+
+    expect(session.selectedDayKey).toBe('wednesday');
+
+    // Switch day to thursday
+    session.setSelectedDayKey('thursday');
+    expect(setStoredDaySpy).toHaveBeenCalledWith('thursday');
+
+    // Re-render reflects updated day
+    stateIndex = 0;
+    const sessionRerender = useWorkoutSession({
+      user: mockUser,
+      partner: mockPartner,
+    });
+    expect(sessionRerender.selectedDayKey).toBe('thursday');
   });
 });

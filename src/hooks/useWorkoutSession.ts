@@ -116,13 +116,6 @@ function derivePartners(user: UserProfile | null, partner: UserProfile | null) {
   return { partner1, partner2, p1Name, p2Name };
 }
 
-function resolveInitialDayKey(todayKey: string): string {
-  if (todayKey === 'sunday' || todayKey === 'wednesday') {
-    return 'monday';
-  }
-  return todayKey;
-}
-
 function buildDayCompletionStatus(profileId: string): Record<string, boolean> {
   const byDate = new Map(StorageService.listDayLogs(profileId).map(l => [l.dateStr, l]));
   const status: Record<string, boolean> = {};
@@ -186,10 +179,15 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
   });
 
   const todayKey = StorageService.getTodayDayKey();
-  const [selectedDayKey, setSelectedDayKey] = useState<string>(() =>
-    resolveInitialDayKey(todayKey),
-  );
+  const [selectedDayKey, setSelectedDayKeyState] = useState<string>(() => {
+    return StorageService.getSelectedDayKey() || todayKey;
+  });
   const selectedDateStr = StorageService.getDateForDayKey(selectedDayKey);
+
+  const setSelectedDayKey = (dayKey: string) => {
+    setSelectedDayKeyState(dayKey);
+    StorageService.setSelectedDayKey(dayKey);
+  };
 
   const [dayLogs, setDayLogs] = useState<Record<string, WorkoutDayLog>>({});
   const [isSyncing, setIsSyncing] = useState<boolean>(false);

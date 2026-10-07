@@ -90,8 +90,6 @@ async function main() {
     `-- ==============================================================================`,
     `PRAGMA foreign_keys = OFF;`,
     ``,
-    `BEGIN TRANSACTION;`,
-    ``,
     `-- 1. Wipe all unassigned library exercises`,
     `DELETE FROM exercises WHERE profile_id IS NULL;`,
     ``,
@@ -130,8 +128,6 @@ async function main() {
   });
 
   sqlStatements.push(
-    ``,
-    `COMMIT;`,
     ``,
     `PRAGMA foreign_keys = ON;`,
     ``

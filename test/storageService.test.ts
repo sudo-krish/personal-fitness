@@ -26,10 +26,12 @@ describe('StorageService', () => {
   const originalFetch = globalThis.fetch;
   const originalNavigator = globalThis.navigator;
   const originalLocalStorage = globalThis.localStorage;
+  const originalSessionStorage = globalThis.sessionStorage;
   const originalWindow = globalThis.window;
 
   beforeEach(() => {
     globalThis.localStorage = createLocalStorageMock() as unknown as Storage;
+    globalThis.sessionStorage = createLocalStorageMock() as unknown as Storage;
     globalThis.window = globalThis as unknown as Window & typeof globalThis;
     Object.defineProperty(globalThis, 'navigator', {
       value: { onLine: true },
@@ -42,6 +44,7 @@ describe('StorageService', () => {
   afterEach(() => {
     globalThis.fetch = originalFetch;
     globalThis.localStorage = originalLocalStorage;
+    globalThis.sessionStorage = originalSessionStorage;
     globalThis.window = originalWindow;
     Object.defineProperty(globalThis, 'navigator', {
       value: originalNavigator,
@@ -470,6 +473,25 @@ describe('StorageService', () => {
       };
       globalThis.localStorage = errorStorage as unknown as Storage;
       expect(StorageService.listDayLogs('person_1')).toEqual([]);
+    });
+  });
+
+  describe('session selected day', () => {
+    it('returns null when no day is selected in session', () => {
+      expect(StorageService.getSelectedDayKey()).toBeNull();
+    });
+
+    it('persists and retrieves selected day in session', () => {
+      StorageService.setSelectedDayKey('wednesday');
+      expect(StorageService.getSelectedDayKey()).toBe('wednesday');
+      expect(sessionStorage.getItem('liquid_fitness_selected_day')).toBe('wednesday');
+    });
+
+    it('clears selected day in session', () => {
+      StorageService.setSelectedDayKey('thursday');
+      expect(StorageService.getSelectedDayKey()).toBe('thursday');
+      StorageService.clearSelectedDayKey();
+      expect(StorageService.getSelectedDayKey()).toBeNull();
     });
   });
 });

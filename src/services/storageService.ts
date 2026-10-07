@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   PROFILES: 'liquid_fitness_profiles',
   WORKOUT_LOGS: 'liquid_fitness_logs', // key: `${profileId}_${dateStr}`
   STATS: 'liquid_fitness_stats', // key: `${profileId}`
+  SELECTED_DAY_KEY: 'liquid_fitness_selected_day',
 };
 
 type RemoteSet = {
@@ -183,6 +184,42 @@ export class StorageService {
   static getTodayDayKey(): string {
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     return days[new Date().getDay()] ?? 'monday';
+  }
+
+  /**
+   * Retrieve active session day key ('monday', 'tuesday', etc.) if set
+   */
+  static getSelectedDayKey(): string | null {
+    if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return null;
+    try {
+      return sessionStorage.getItem(STORAGE_KEYS.SELECTED_DAY_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Persist active session day key for cross-page navigation within tab
+   */
+  static setSelectedDayKey(dayKey: string): void {
+    if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return;
+    try {
+      sessionStorage.setItem(STORAGE_KEYS.SELECTED_DAY_KEY, dayKey);
+    } catch {
+      // Non-critical fallback
+    }
+  }
+
+  /**
+   * Clear persisted active day key (e.g. on fresh login or sign-out)
+   */
+  static clearSelectedDayKey(): void {
+    if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return;
+    try {
+      sessionStorage.removeItem(STORAGE_KEYS.SELECTED_DAY_KEY);
+    } catch {
+      // Non-critical fallback
+    }
   }
 
   /**
