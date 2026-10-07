@@ -10,7 +10,7 @@ import {
   signJwt,
   createRefreshTokenCookie,
   clearRefreshTokenCookie,
-} from '../../lib/auth';
+} from '../../_lib/auth';
 
 interface Env {
   DB?: any;
