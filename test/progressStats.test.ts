@@ -86,7 +86,9 @@ describe('progressStats', () => {
 
   it('computes streak skipping rest days and an untrained today', () => {
     expect(computeStreak(logs, ['sunday', 'wednesday'], ref)).toBe(2);
-    expect(computeStreak(logs, [], ref)).toBe(0);
+    expect(computeStreak([], [], ref)).toBe(0);
+    expect(computeStreak(logs, [], new Date(2026, 9, 8))).toBe(0);
+    expect(computeStreak(logs, [], new Date(2026, 9, 6))).toBe(2);
   });
 
   it('finds bests, records and last performance', () => {
@@ -94,7 +96,9 @@ describe('progressStats', () => {
     expect(recentRecords(logs, 3, ref).map(r => r.exerciseId)).toEqual(['squat', 'bench', 'row']);
     expect(lastPerformance(logs, 'bench', '2026-10-05')).toMatchObject({ weightKg: 60, sets: 2 });
     expect(lastPerformance(logs, 'bench', '2026-09-28')).toBeNull();
+    expect(lastPerformance(logs, 'nonexistent', '2026-10-07')).toBeNull();
     expect(exerciseHistory(logs, 'bench')).toHaveLength(2);
+    expect(exerciseHistory(logs, 'nonexistent')).toHaveLength(0);
   });
 
   it('formats volume', () => {

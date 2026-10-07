@@ -159,7 +159,7 @@ describe('StorageService', () => {
     it('returns default stats for new profile', () => {
       const stats = StorageService.getUserStats('new-user');
       expect(stats.profileId).toBe('new-user');
-      expect(stats.currentStreak).toBe(1);
+      expect(stats.currentStreak).toBe(0);
       expect(stats.totalWorkoutsCompleted).toBe(0);
     });
   });
@@ -239,7 +239,7 @@ describe('StorageService', () => {
 
       const stats = StorageService.getUserStats('person_1');
       expect(stats.totalWorkoutsCompleted).toBe(1);
-      expect(stats.currentStreak).toBe(2);
+      expect(stats.currentStreak).toBe(1);
       expect(stats.lastWorkoutDate).toBe('2026-09-19');
     });
 
@@ -387,7 +387,7 @@ describe('StorageService', () => {
       };
       globalThis.localStorage = errorStorage as unknown as Storage;
       const fallbackStats = StorageService.getUserStats('person_1');
-      expect(fallbackStats.currentStreak).toBe(1);
+      expect(fallbackStats.currentStreak).toBe(0);
     });
   });
 
@@ -414,6 +414,59 @@ describe('StorageService', () => {
       };
       globalThis.localStorage = errorStorage as unknown as Storage;
       expect(() => StorageService.clearWorkoutLogs()).not.toThrow();
+    });
+  });
+
+  describe('listDayLogs', () => {
+    it('returns empty array when no logs exist for profile', () => {
+      localStorage.clear();
+      expect(StorageService.listDayLogs('person_1')).toEqual([]);
+    });
+
+    it('filters and sorts logs by dateStr, ignoring corrupt and non-matching entries', () => {
+      localStorage.clear();
+      const valid1 = {
+        profileId: 'person_1',
+        dateStr: '2026-10-06',
+        dayKey: 'tuesday',
+        exercisesProgress: {},
+      };
+      const valid2 = {
+        profileId: 'person_1',
+        dateStr: '2026-10-05',
+        dayKey: 'monday',
+        exercisesProgress: {},
+      };
+      const otherProfile = {
+        profileId: 'person_2',
+        dateStr: '2026-10-07',
+        dayKey: 'wednesday',
+        exercisesProgress: {},
+      };
+
+      localStorage.setItem('liquid_fitness_logs_person_1_2026-10-06', JSON.stringify(valid1));
+      localStorage.setItem('liquid_fitness_logs_person_1_2026-10-05', JSON.stringify(valid2));
+      localStorage.setItem('liquid_fitness_logs_person_2_2026-10-07', JSON.stringify(otherProfile));
+      localStorage.setItem('liquid_fitness_logs_person_1_corrupt', 'not-json');
+      localStorage.setItem('liquid_fitness_logs_person_1_empty', '');
+      localStorage.setItem('liquid_fitness_logs_person_1_missing_progress', JSON.stringify({ dateStr: '2026-10-01' }));
+
+      const logs = StorageService.listDayLogs('person_1');
+      expect(logs).toHaveLength(2);
+      expect(logs[0]?.dateStr).toBe('2026-10-05');
+      expect(logs[1]?.dateStr).toBe('2026-10-06');
+    });
+
+    it('handles errors gracefully when reading day logs', () => {
+      const errorStorage = {
+        ...localStorage,
+        length: 1,
+        key: vi.fn(() => {
+          throw new Error('StorageError');
+        }),
+      };
+      globalThis.localStorage = errorStorage as unknown as Storage;
+      expect(StorageService.listDayLogs('person_1')).toEqual([]);
     });
   });
 });
