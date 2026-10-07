@@ -137,7 +137,7 @@ async function main() {
     ``
   );
 
-  const outFilePath = path.join(ROOT_DIR, 'migrations', 'truncate_and_load.sql');
+  const outFilePath = path.join(ROOT_DIR, 'data', 'truncate_and_load.sql');
   fs.writeFileSync(outFilePath, sqlStatements.join('\n'), 'utf8');
   console.log(`[Truncate & Load] Generated SQL file: ${outFilePath}`);
 
@@ -155,8 +155,8 @@ async function main() {
     }
   } else {
     console.log(`\nTo run against D1:`);
-    console.log(`  npx wrangler d1 execute ${DB_NAME} --remote --file=migrations/truncate_and_load.sql -y`);
-    console.log(`  npx wrangler d1 execute ${DB_NAME} --local --file=migrations/truncate_and_load.sql -y`);
+    console.log(`  npx wrangler d1 execute ${DB_NAME} --remote --file=data/truncate_and_load.sql -y`);
+    console.log(`  npx wrangler d1 execute ${DB_NAME} --local --file=data/truncate_and_load.sql -y`);
   }
 }
 

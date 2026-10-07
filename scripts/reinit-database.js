@@ -219,7 +219,7 @@ async function main() {
     ``
   );
 
-  const outFilePath = path.join(ROOT_DIR, 'migrations', 'reinit_database.sql');
+  const outFilePath = path.join(ROOT_DIR, 'data', 'reinit_database.sql');
   fs.writeFileSync(outFilePath, sqlStatements.join('\n'), 'utf8');
   console.log(`[Reinit] Generated complete re-initialization SQL: ${outFilePath}`);
 
@@ -237,8 +237,8 @@ async function main() {
     }
   } else {
     console.log(`\nTo run against D1:`);
-    console.log(`  npx wrangler d1 execute ${DB_NAME} --remote --file=migrations/reinit_database.sql -y`);
-    console.log(`  npx wrangler d1 execute ${DB_NAME} --local --file=migrations/reinit_database.sql -y`);
+    console.log(`  npx wrangler d1 execute ${DB_NAME} --remote --file=data/reinit_database.sql -y`);
+    console.log(`  npx wrangler d1 execute ${DB_NAME} --local --file=data/reinit_database.sql -y`);
   }
 }
 
