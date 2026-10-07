@@ -80,6 +80,19 @@ async function setupDatabase() {
 
   // 3. Database identified by name: DB_NAME
   console.log(`[CI-D1] Using database "${DB_NAME}" directly for all operations.`);
+  try {
+    const tomlContent = fs.readFileSync('wrangler.toml', 'utf8');
+    if (!tomlContent.includes('database_id')) {
+      const updatedToml = tomlContent.replace(
+        `database_name = "${DB_NAME}"`,
+        `database_name = "${DB_NAME}"\ndatabase_id = "${dbId}"`
+      );
+      fs.writeFileSync('wrangler.toml', updatedToml, 'utf8');
+      console.log(`[CI-D1] Synchronized database_id (${dbId}) into wrangler.toml.`);
+    }
+  } catch (syncErr) {
+    console.log('[CI-D1] Note on wrangler.toml sync:', syncErr.message);
+  }
 
   // 4. Apply migrations automatically
   console.log('[CI-D1] Applying pending D1 schema migrations...');

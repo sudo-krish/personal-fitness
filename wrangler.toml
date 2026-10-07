@@ -8,4 +8,5 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "fitness-db"
+database_id = "ca46b84d-2f4f-4180-b20b-cff55d659bb9"
 migrations_dir = "migrations"
