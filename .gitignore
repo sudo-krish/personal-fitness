@@ -12,7 +12,7 @@ dist/
 dist-ssr/
 build/
 out/
-lib/
+/lib/
 *.local
 
 # Cloudflare Wrangler state & logs
