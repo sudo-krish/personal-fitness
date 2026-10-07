@@ -4,7 +4,7 @@
 import { drizzle } from 'drizzle-orm/d1';
 import { eq, and, ne } from 'drizzle-orm';
 import * as schema from '../../../src/db/schema';
-import { verifyJwt, parseCookie } from '../../lib/auth';
+import { verifyJwt, parseCookie } from '../../_lib/auth';
 
 interface Env {
   DB?: any;

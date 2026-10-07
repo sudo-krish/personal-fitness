@@ -9,7 +9,7 @@ import {
   verifyPassword,
   signJwt,
   createRefreshTokenCookie,
-} from '../../lib/auth';
+} from '../../_lib/auth';
 
 interface Env {
   DB?: any;

@@ -9,7 +9,7 @@ import {
   hashPassword,
   signJwt,
   createRefreshTokenCookie,
-} from '../../lib/auth';
+} from '../../_lib/auth';
 import { WORKOUT_PLAN_DATA, DAY_SCHEDULES } from '../../../src/data/initialWorkoutPlan';
 
 interface Env {
