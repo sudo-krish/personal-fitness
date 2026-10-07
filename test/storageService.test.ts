@@ -449,7 +449,10 @@ describe('StorageService', () => {
       localStorage.setItem('liquid_fitness_logs_person_2_2026-10-07', JSON.stringify(otherProfile));
       localStorage.setItem('liquid_fitness_logs_person_1_corrupt', 'not-json');
       localStorage.setItem('liquid_fitness_logs_person_1_empty', '');
-      localStorage.setItem('liquid_fitness_logs_person_1_missing_progress', JSON.stringify({ dateStr: '2026-10-01' }));
+      localStorage.setItem(
+        'liquid_fitness_logs_person_1_missing_progress',
+        JSON.stringify({ dateStr: '2026-10-01' }),
+      );
 
       const logs = StorageService.listDayLogs('person_1');
       expect(logs).toHaveLength(2);
