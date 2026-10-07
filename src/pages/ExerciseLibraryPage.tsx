@@ -8,8 +8,10 @@ import { CropMarks } from '../components/art/CropMarks';
 import { ExerciseThumb } from '../components/ui/ExerciseThumb';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { Exercise } from '../types/workout';
-import { Search, X, Play, Loader2, Dumbbell, Sparkles } from 'lucide-react';
+import { Search, X, Play, Loader2, Dumbbell, Sparkles, Trophy, History } from 'lucide-react';
 import { haptics } from '../lib/haptics';
+import { StorageService } from '../services/storageService';
+import { bestByExercise, exerciseHistory } from '../lib/progressStats';
 
 interface ExerciseLibraryPageProps {
   onOpenVideo?: (url: string, title: string) => void;
@@ -50,6 +52,14 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
   const isPrimary = user?.isPrimary ?? true;
   const p1Name = isPrimary ? user?.name || 'Partner 1' : partner?.name || 'Partner 1';
   const p2Name = isPrimary ? partner?.name || 'Partner 2' : user?.name || 'Partner 2';
+  const myLogs = StorageService.listDayLogs(isPrimary ? 'person_1' : 'person_2');
+  const myBests = bestByExercise(myLogs);
+  const selectedHistory = selectedExercise ? exerciseHistory(myLogs, selectedExercise.id) : [];
+
+  const openExercise = (exercise: Exercise) => {
+    haptics.tap();
+    setSelectedExercise(exercise);
+  };
 
   return (
     <div className="w-full max-w-[560px] sm:max-w-[760px] mx-auto px-5 pt-6 pb-36 animate-rise flex flex-col gap-5">
@@ -70,14 +80,16 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search exercises by name, equipment, muscle..."
+            placeholder="Search exercises, equipment, muscle…"
+            aria-label="Search exercises"
             className="w-full bg-transparent border-0 outline-none text-sm text-ink placeholder:text-ink-muted"
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch('')}
-              className="text-ink-muted hover:text-ink cursor-pointer p-0.5"
+              className="text-ink-muted hover:text-ink cursor-pointer p-1.5 -m-1"
+              aria-label="Clear search"
             >
               <X size={16} />
             </button>
@@ -137,10 +149,16 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
             <Card
               key={exercise.id}
               variant="plain"
-              className="group relative p-3 flex flex-col justify-between gap-3 cursor-pointer hover:border-ink/20 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-300 bg-surface/40"
-              onClick={() => {
-                haptics.tap();
-                setSelectedExercise(exercise);
+              role="button"
+              tabIndex={0}
+              aria-label={`${exercise.name}, ${exercise.muscle}. Open details`}
+              className="group relative p-3 flex flex-col justify-between gap-3 cursor-pointer hover:border-ink/20 hover:shadow-sm hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-sage-500 transition-all duration-300 bg-surface/40"
+              onClick={() => openExercise(exercise)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openExercise(exercise);
+                }
               }}
             >
               <div className="flex flex-col gap-2.5">
@@ -157,11 +175,17 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
                         e.stopPropagation();
                         if (onOpenVideo) onOpenVideo(exercise.videoUrl!, exercise.name);
                       }}
-                      className="absolute bottom-2 right-2 glass size-8 rounded-full flex items-center justify-center text-ink hover:bg-white active:scale-90 transition-all cursor-pointer shadow-xs"
-                      aria-label="Play video"
+                      className="absolute bottom-2 right-2 glass size-10 rounded-full flex items-center justify-center text-ink hover:bg-white active:scale-90 transition-all cursor-pointer shadow-xs"
+                      aria-label={`Play video for ${exercise.name}`}
                     >
-                      <Play size={11} className="fill-current ml-0.5" />
+                      <Play size={12} className="fill-current ml-0.5" />
                     </button>
+                  )}
+                  {myBests.get(exercise.id) && (
+                    <span className="absolute top-2 left-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full glass text-[10px] font-semibold text-ink">
+                      <Trophy size={10} className="text-sage-700" />
+                      {myBests.get(exercise.id)?.weightKg}kg
+                    </span>
                   )}
                 </div>
 
@@ -177,16 +201,16 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
               </div>
 
               {/* Target / Assignment Pill */}
-              <div className="pt-2.5 border-t border-hairline flex items-center justify-between text-[11px] text-ink-muted font-mono px-0.5">
-                <span className="font-semibold tracking-tight">{exercise.targetSets}×{exercise.targetReps}</span>
+              <div className="pt-2.5 border-t border-hairline flex items-center justify-between gap-2 text-[11px] text-ink-muted font-mono px-0.5">
+                <span className="font-semibold tracking-tight shrink-0">{exercise.targetSets}×{exercise.targetReps}</span>
                 {exercise.profileId === 'person_1' && (
-                  <span className="px-2 py-0.5 rounded-full bg-p1-tint text-p1-ink font-semibold font-sans">
-                    {p1Name.slice(0, 4)}
+                  <span className="px-2 py-0.5 rounded-full bg-p1-tint text-p1-ink font-semibold font-sans truncate">
+                    {p1Name}
                   </span>
                 )}
                 {exercise.profileId === 'person_2' && (
-                  <span className="px-2 py-0.5 rounded-full bg-p2-tint text-p2-ink font-semibold font-sans">
-                    {p2Name.slice(0, 4)}
+                  <span className="px-2 py-0.5 rounded-full bg-p2-tint text-p2-ink font-semibold font-sans truncate">
+                    {p2Name}
                   </span>
                 )}
               </div>
@@ -260,7 +284,31 @@ export function ExerciseLibraryPage({ onOpenVideo }: ExerciseLibraryPageProps) {
               </div>
             )}
 
-            {/* Duo Assignment Controls */}
+            {/* Personal history */}
+            <div className="flex flex-col gap-2">
+              <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+                <History size={12} /> Your recent sessions
+              </span>
+              {selectedHistory.length === 0 ? (
+                <p className="text-xs text-ink-muted">Not logged yet. Your sets show up here after training.</p>
+              ) : (
+                <ul className="flex flex-col gap-1.5">
+                  {selectedHistory.map((row) => (
+                    <li
+                      key={row.dateStr}
+                      className="flex items-center justify-between gap-3 px-3 py-2 rounded-xl bg-sunk text-xs"
+                    >
+                      <span className="text-ink-muted tabular-nums shrink-0">
+                        {new Date(`${row.dateStr}T00:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                      </span>
+                      <span className="font-mono text-ink tabular-nums truncate">
+                        {row.sets.map((s) => `${s.weightKg}×${s.reps}`).join('  ')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <div className="flex flex-col gap-2 pt-2 border-t border-hairline">
               <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
                 Assign to Partner Split

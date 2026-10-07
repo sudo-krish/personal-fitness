@@ -123,13 +123,11 @@ function resolveInitialDayKey(todayKey: string): string {
   return todayKey;
 }
 
-function buildDayCompletionStatus(
-  dayLogs: Record<string, WorkoutDayLog>,
-  activeProfileId: string,
-): Record<string, boolean> {
+function buildDayCompletionStatus(profileId: string): Record<string, boolean> {
+  const byDate = new Map(StorageService.listDayLogs(profileId).map(l => [l.dateStr, l]));
   const status: Record<string, boolean> = {};
   for (const d of DAY_SCHEDULES) {
-    const log = dayLogs[`${activeProfileId}_${d.key}`];
+    const log = byDate.get(StorageService.getDateForDayKey(d.key));
     status[d.key] = log ? log.isWorkoutFinished : false;
   }
   return status;
@@ -188,10 +186,10 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
   });
 
   const todayKey = StorageService.getTodayDayKey();
-  const todayDateStr = StorageService.getTodayDateStr();
   const [selectedDayKey, setSelectedDayKey] = useState<string>(() =>
     resolveInitialDayKey(todayKey),
   );
+  const selectedDateStr = StorageService.getDateForDayKey(selectedDayKey);
 
   const [dayLogs, setDayLogs] = useState<Record<string, WorkoutDayLog>>({});
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -217,12 +215,12 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
     for (const pId of ['person_1', 'person_2'] as const) {
       const logKey = `${pId}_${selectedDayKey}`;
       if (!dayLogs[logKey]) {
-        const loaded = StorageService.getDayLog(pId, todayDateStr, selectedDayKey);
+        const loaded = StorageService.getDayLog(pId, selectedDateStr, selectedDayKey);
         setDayLogs(prev => ({ ...prev, [logKey]: loaded }));
       }
 
       setIsSyncing(true);
-      StorageService.fetchRemoteDayLog(pId, todayDateStr, selectedDayKey)
+      StorageService.fetchRemoteDayLog(pId, selectedDateStr, selectedDayKey)
         .then(remoteLog => {
           if (active && remoteLog) {
             setDayLogs(prev => ({ ...prev, [logKey]: remoteLog }));
@@ -236,7 +234,7 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
     return () => {
       active = false;
     };
-  }, [selectedDayKey, todayDateStr]);
+  }, [selectedDayKey, selectedDateStr]);
 
   const toggleActiveProfile = () => {
     const nextId: 'person_1' | 'person_2' =
@@ -253,10 +251,10 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
 
   const p1DayLog: WorkoutDayLog =
     dayLogs[`person_1_${selectedDayKey}`] ||
-    StorageService.getDayLog('person_1', todayDateStr, selectedDayKey);
+    StorageService.getDayLog('person_1', selectedDateStr, selectedDayKey);
   const p2DayLog: WorkoutDayLog =
     dayLogs[`person_2_${selectedDayKey}`] ||
-    StorageService.getDayLog('person_2', todayDateStr, selectedDayKey);
+    StorageService.getDayLog('person_2', selectedDateStr, selectedDayKey);
 
   const updateSet = (
     profileId: 'person_1' | 'person_2',
@@ -289,7 +287,9 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
     }
   };
 
-  const dayCompletionStatus = buildDayCompletionStatus(dayLogs, activeProfileId);
+  const myRole: 'person_1' | 'person_2' = (user?.isPrimary ?? true) ? 'person_1' : 'person_2';
+  // dayLogs in the dependency chain keeps this fresh after every updateSet.
+  const dayCompletionStatus = buildDayCompletionStatus(myRole);
   const p1Stats = computeSetStats(p1Exercises, p1DayLog);
   const p2Stats = computeSetStats(p2Exercises, p2DayLog);
 
@@ -298,11 +298,13 @@ export function useWorkoutSession({ user, partner, onStartRest }: UseWorkoutSess
     partner2,
     p1Name,
     p2Name,
+    myRole,
     activeProfileId,
     setActiveProfileId,
     toggleActiveProfile,
     todayKey,
     selectedDayKey,
+    selectedDateStr,
     setSelectedDayKey,
     currentSchedule,
     p1Exercises,

@@ -5,41 +5,42 @@ import { useRestTimer } from '../hooks/useRestTimer';
 import { useWorkoutSession } from '../hooks/useWorkoutSession';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
-import { Avatar } from '../components/ui/Avatar';
 import { Segmented } from '../components/ui/Segmented';
-import { Stepper } from '../components/ui/Stepper';
-import { SetBeads } from '../components/art/SetBeads';
 import { RestTimerHUD } from '../features/workout/RestTimerHUD';
-import { CropMarks } from '../components/art/CropMarks';
-import { ExerciseThumb } from '../components/ui/ExerciseThumb';
+import { ExerciseRow } from '../features/workout/ExerciseRow';
 import { ThemeToggle } from '../components/ui/ThemeToggle';
 import { getSplitCoverPath } from '../lib/assetsMap';
 import { DAY_SCHEDULES } from '../data/initialWorkoutPlan';
-import { Exercise } from '../types/workout';
-import { ChevronLeft, ChevronRight, Play, CheckCircle2, Trophy } from 'lucide-react';
+import { StorageService } from '../services/storageService';
+import { bestByExercise, lastPerformance, epley, formatVolume } from '../lib/progressStats';
+import type { Exercise, WorkoutDayLog } from '../types/workout';
+import { ChevronLeft, ChevronRight, Trophy, Leaf, Timer, Dumbbell, Layers } from 'lucide-react';
 import { haptics } from '../lib/haptics';
 
 interface TrainPageProps {
   onOpenVideo?: (url: string, title: string) => void;
 }
 
+type Role = 'person_1' | 'person_2';
+interface RowRef {
+  role: Role;
+  exercise: Exercise;
+}
+
+const rowKey = (r: RowRef) => `${r.role}:${r.exercise.id}`;
+
 export function TrainPage({ onOpenVideo }: TrainPageProps) {
   const { navigate } = useRouter();
   const { user, partner } = useAuth();
-  const isPrimary = user?.isPrimary ?? true;
 
-  const {
-    restSecondsRemaining,
-    isRestTimerRunning,
-    startRestTimer,
-    adjustRestTime,
-    skipRest,
-  } = useRestTimer();
+  const { restSecondsRemaining, isRestTimerRunning, startRestTimer, adjustRestTime, skipRest } = useRestTimer();
 
   const {
     p1Name,
     p2Name,
+    myRole,
     selectedDayKey,
+    selectedDateStr,
     setSelectedDayKey,
     currentSchedule,
     p1Exercises,
@@ -47,482 +48,262 @@ export function TrainPage({ onOpenVideo }: TrainPageProps) {
     p1DayLog,
     p2DayLog,
     updateSet,
-  } = useWorkoutSession({
-    user,
-    partner,
-    onStartRest: () => startRestTimer(60),
-  });
+  } = useWorkoutSession({ user, partner, onStartRest: () => startRestTimer(60) });
 
-  const [mode, setMode] = useState<'together' | 'solo'>('together');
-  const [activeStationIdx, setActiveStationIdx] = useState<number>(0);
-  const [activePartnerRow, setActivePartnerRow] = useState<'person_1' | 'person_2'>('person_1');
-  const [activeSetNum, setActiveSetNum] = useState<number>(1);
+  const [mode, setMode] = useState<'together' | 'solo'>(partner ? 'together' : 'solo');
+  const [focusKey, setFocusKey] = useState<string | null>(null);
 
-  // Stepper draft values for current active set
-  const [draftWeight, setDraftWeight] = useState<number>(20);
-  const [draftReps, setDraftReps] = useState<number>(10);
+  const logFor = (role: Role): WorkoutDayLog => (role === 'person_1' ? p1DayLog : p2DayLog);
+  const nameFor = (role: Role) => (role === 'person_1' ? p1Name : p2Name);
+  const setsFor = (r: RowRef) => logFor(r.role).exercisesProgress[r.exercise.id]?.sets ?? [];
+  const isRowDone = (r: RowRef) => Boolean(logFor(r.role).exercisesProgress[r.exercise.id]?.isFullyCompleted);
 
-  const myRole = isPrimary ? 'person_1' : 'person_2';
+  // Prior history (excluding the day being edited) drives last-session hints and PR detection.
+  const priorLogs = {
+    person_1: StorageService.listDayLogs('person_1').filter(l => l.dateStr !== selectedDateStr),
+    person_2: StorageService.listDayLogs('person_2').filter(l => l.dateStr !== selectedDateStr),
+  };
+  const priorBest = { person_1: bestByExercise(priorLogs.person_1), person_2: bestByExercise(priorLogs.person_2) };
 
-  const myExercises = isPrimary ? p1Exercises : p2Exercises;
-  const myLog = isPrimary ? p1DayLog : p2DayLog;
-
+  // Ordered rows for the current mode: solo = my list, together = station-interleaved.
+  const myExercises = myRole === 'person_1' ? p1Exercises : p2Exercises;
   const maxStations = Math.max(p1Exercises.length, p2Exercises.length);
+  const orderedRows: RowRef[] =
+    mode === 'solo'
+      ? myExercises.map(exercise => ({ role: myRole, exercise }))
+      : Array.from({ length: maxStations }).flatMap((_, i) => {
+          const rows: RowRef[] = [];
+          const a = p1Exercises[i];
+          const b = p2Exercises[i];
+          if (a) rows.push({ role: 'person_1', exercise: a });
+          if (b) rows.push({ role: 'person_2', exercise: b });
+          return rows;
+        });
 
-  // Day navigation cycling
-  const currentDayIndex = DAY_SCHEDULES.findIndex((d) => d.key === selectedDayKey);
-  const nextDay = () => {
-    haptics.tap();
-    const nextIdx = (currentDayIndex + 1) % DAY_SCHEDULES.length;
-    const target = DAY_SCHEDULES[nextIdx];
-    if (target) setSelectedDayKey(target.key);
+  const firstOpen = orderedRows.find(r => !isRowDone(r));
+  const activeKey = focusKey ?? (firstOpen ? rowKey(firstOpen) : null);
+
+  const advanceFrom = (current: RowRef) => {
+    const idx = orderedRows.findIndex(r => rowKey(r) === rowKey(current));
+    const after = [...orderedRows.slice(idx + 1), ...orderedRows.slice(0, idx)];
+    const next = after.find(r => !isRowDone(r));
+    if (!next) {
+      setFocusKey(null);
+      return;
+    }
+    setFocusKey(rowKey(next));
+    window.setTimeout(() => {
+      document
+        .getElementById(`row-${next.role}-${next.exercise.id}`)
+        ?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    }, 120);
   };
-  const prevDay = () => {
-    haptics.tap();
-    const prevIdx = (currentDayIndex - 1 + DAY_SCHEDULES.length) % DAY_SCHEDULES.length;
-    const target = DAY_SCHEDULES[prevIdx];
-    if (target) setSelectedDayKey(target.key);
-  };
 
-  // Completion metrics
-  const totalCombinedSets = p1Exercises.reduce((a, b) => a + b.targetSets, 0) + p2Exercises.reduce((a, b) => a + b.targetSets, 0);
-  const completedCombinedSets =
-    p1Exercises.reduce((acc, ex) => acc + (p1DayLog?.exercisesProgress[ex.id]?.sets.filter((s) => s.isCompleted).length || 0), 0) +
-    p2Exercises.reduce((acc, ex) => acc + (p2DayLog?.exercisesProgress[ex.id]?.sets.filter((s) => s.isCompleted).length || 0), 0);
-
-  const myTotalSets = myExercises.reduce((a, b) => a + b.targetSets, 0);
-  const myCompletedSets = myExercises.reduce(
-    (acc, ex) => acc + (myLog?.exercisesProgress[ex.id]?.sets.filter((s) => s.isCompleted).length || 0),
-    0
-  );
-
-  const displaySets = mode === 'together' ? completedCombinedSets : myCompletedSets;
-  const displayTotal = mode === 'together' ? totalCombinedSets : myTotalSets;
-  const progressPct = displayTotal > 0 ? Math.round((displaySets / displayTotal) * 100) : 0;
-
-  // Handle logging a set for an exercise
-  const handleLogSet = (role: 'person_1' | 'person_2', exercise: Exercise, setNum: number) => {
+  const handleLog = (r: RowRef, setNumber: number, weightKg: number, reps: number) => {
     haptics.success();
-    const targetLog = role === 'person_1' ? p1DayLog : p2DayLog;
-    const existingSets = targetLog?.exercisesProgress[exercise.id]?.sets || [];
-    const existing = existingSets.find((s) => s.setNumber === setNum);
-    const willBeCompleted = !existing?.isCompleted;
-
-    updateSet(role, exercise.id, setNum, {
-      isCompleted: willBeCompleted,
-      weightKg: String(draftWeight),
-      repsCompleted: String(draftReps),
+    updateSet(r.role, r.exercise.id, setNumber, {
+      isCompleted: true,
+      weightKg: String(weightKg),
+      repsCompleted: String(reps),
+      completedAt: new Date().toISOString(),
     });
+  };
 
-    if (willBeCompleted && setNum < exercise.targetSets) {
-      setActiveSetNum(setNum + 1);
+  const handleUndo = (r: RowRef, setNumber: number) => {
+    updateSet(r.role, r.exercise.id, setNumber, { isCompleted: false, completedAt: undefined });
+  };
+
+  // Day navigation
+  const currentDayIndex = DAY_SCHEDULES.findIndex(d => d.key === selectedDayKey);
+  const shiftDay = (delta: 1 | -1) => {
+    haptics.tap();
+    const target = DAY_SCHEDULES[(currentDayIndex + delta + DAY_SCHEDULES.length) % DAY_SCHEDULES.length];
+    if (target) {
+      setSelectedDayKey(target.key);
+      setFocusKey(null);
     }
   };
 
-  const isSessionFinished = displayTotal > 0 && displaySets >= displayTotal;
+  // Session metrics for the visible scope
+  const scopeRows = orderedRows;
+  const totalSets = scopeRows.reduce((a, r) => a + r.exercise.targetSets, 0);
+  const doneSets = scopeRows.reduce((a, r) => a + setsFor(r).filter(s => s.isCompleted).length, 0);
+  const progressPct = totalSets > 0 ? Math.round((doneSets / totalSets) * 100) : 0;
+  const isSessionFinished = totalSets > 0 && doneSets >= totalSets;
+
+  const summary = (() => {
+    let volume = 0;
+    let prs = 0;
+    const stamps: number[] = [];
+    for (const r of scopeRows) {
+      const best = priorBest[r.role].get(r.exercise.id);
+      let rowTop = 0;
+      for (const s of setsFor(r)) {
+        if (!s.isCompleted) continue;
+        const w = parseFloat(s.weightKg) || 0;
+        const reps = parseFloat(s.repsCompleted) || 0;
+        volume += w * reps;
+        rowTop = Math.max(rowTop, epley(w, reps));
+        if (s.completedAt) stamps.push(Date.parse(s.completedAt));
+      }
+      if (best && rowTop > best.e1rm) prs += 1;
+    }
+    const minutes = stamps.length > 1 ? Math.round((Math.max(...stamps) - Math.min(...stamps)) / 60000) : null;
+    return { volume, prs, minutes };
+  })();
+
+  const stations =
+    mode === 'together'
+      ? Array.from({ length: maxStations }).map((_, i) => ({
+          label: p1Exercises[i]?.pair || p2Exercises[i]?.pair || `Station ${i + 1}`,
+          rows: orderedRows.filter(r => p1Exercises[i] === r.exercise || p2Exercises[i] === r.exercise),
+        }))
+      : [{ label: '', rows: orderedRows }];
 
   return (
-    <div className="w-full max-w-[560px] mx-auto px-5 pt-4 pb-36 animate-rise">
-      {/* Top Header Controls */}
-      <div className="flex items-center justify-between mb-3 px-1">
-        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-muted">
-          Duo Training Session
-        </span>
-        <ThemeToggle />
-      </div>
-
-      {/* R1: SLIM DAY STRIP */}
-      <div className="relative w-full h-32 rounded-3xl overflow-hidden bg-canvas mb-4">
+    <div className="w-full max-w-[560px] mx-auto px-5 pt-4 pb-40 animate-rise">
+      {/* Header */}
+      <header className="relative w-full h-36 rounded-[28px] overflow-hidden mb-4 bg-sunk">
         <img
           src={getSplitCoverPath(selectedDayKey)}
-          alt={currentSchedule.splitTitle}
-          className="w-full h-full object-cover"
+          alt=""
+          aria-hidden
+          className="absolute inset-0 w-full h-full object-cover"
           draggable={false}
         />
-        <CropMarks offset={6} length={14} className="text-white/40" />
-        <div className="absolute inset-0 bg-gradient-to-r from-canvas/80 via-transparent to-canvas/80" />
-
-        {/* Day Header with Chevrons */}
-        <div className="absolute inset-0 flex items-center justify-between px-4 z-10">
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/30 to-ink/10" />
+        <div className="absolute top-3 right-3 z-10">
+          <ThemeToggle />
+        </div>
+        <div className="absolute inset-x-0 bottom-0 p-4 flex items-end justify-between gap-3 z-10">
           <button
             type="button"
-            onClick={prevDay}
-            className="glass size-10 rounded-full flex items-center justify-center text-ink hover:bg-white active:scale-95 transition-all cursor-pointer"
-            aria-label="Previous Day"
+            onClick={() => shiftDay(-1)}
+            className="glass size-11 rounded-full flex items-center justify-center text-ink active:scale-95 transition cursor-pointer"
+            aria-label="Previous day"
           >
             <ChevronLeft size={18} />
           </button>
-
-          <div className="glass px-5 py-2 rounded-full flex flex-col items-center">
-            <h1 className="font-display text-xl font-medium text-ink leading-tight">
+          <div className="text-center text-white min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/75">
               {currentSchedule.name}
-            </h1>
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-sage-700">
+            </p>
+            <h1 className="font-display text-2xl font-medium leading-tight truncate">
               {currentSchedule.splitTitle.split('(')[0]?.trim()}
-            </span>
+            </h1>
           </div>
-
           <button
             type="button"
-            onClick={nextDay}
-            className="glass size-10 rounded-full flex items-center justify-center text-ink hover:bg-white active:scale-95 transition-all cursor-pointer"
-            aria-label="Next Day"
+            onClick={() => shiftDay(1)}
+            className="glass size-11 rounded-full flex items-center justify-center text-ink active:scale-95 transition cursor-pointer"
+            aria-label="Next day"
           >
             <ChevronRight size={18} />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* R2: MODE SWITCH (Together / Solo) */}
-      <div className="flex flex-col gap-2.5 mb-5">
-        <Segmented
-          label="Training Mode"
-          value={mode}
-          onChange={(val) => {
-            haptics.tap();
-            setMode(val);
-          }}
-          options={[
-            { value: 'together', label: 'Together (Supersets)' },
-            { value: 'solo', label: 'Solo (Your Routine)' },
-          ]}
-        />
-
-        {/* R3: Session meter */}
-        <div className="flex items-center justify-between text-xs font-semibold px-1 text-ink-muted">
-          <span>{mode === 'together' ? 'Duo Progress' : 'My Progress'}</span>
-          <span className="tabular-nums font-mono">
-            {displaySets} / {displayTotal} sets ({progressPct}%)
-          </span>
-        </div>
-        <div className="w-full h-1.5 rounded-full bg-sunk overflow-hidden">
-          <div
-            className="h-full bg-sage-500 rounded-full transition-all duration-300"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
-      </div>
-
-      {/* SESSION CONTENT */}
-      {currentSchedule.isRest ? (
-        <Card variant="tinted" className="p-8 text-center flex flex-col items-center gap-3">
-          <span className="text-3xl">🌿</span>
-          <h2 className="font-display text-xl font-medium text-ink">Scheduled Rest Day</h2>
-          <p className="text-xs text-ink-muted max-w-xs">
-            Rest and hydration day. Use the arrows above to view another day or log ahead.
-          </p>
-          <Button variant="glass" size="sm" onClick={() => navigate('/')}>
-            Back to Today
-          </Button>
-        </Card>
-      ) : maxStations === 0 ? (
-        <Card variant="tinted" className="p-8 text-center flex flex-col items-center gap-3">
-          <h2 className="font-display text-xl font-medium text-ink">No Exercises Scheduled</h2>
-          <p className="text-xs text-ink-muted">Go to Today to reload the 5-day duo split.</p>
-          <Button variant="primary" size="sm" onClick={() => navigate('/')}>
-            Go to Today
-          </Button>
-        </Card>
-      ) : mode === 'solo' ? (
-        /* SOLO MODE: User's individual exercises with journey line */
-        <div className="relative flex flex-col gap-4 pl-8">
-          {/* Journey Line Gutter */}
-          <div className="absolute top-6 bottom-6 left-3 w-[1.5px] bg-ink/10" aria-hidden />
-
-          {myExercises.map((exercise, idx) => {
-            const isExpanded = activeStationIdx === idx;
-            const progress = myLog?.exercisesProgress[exercise.id];
-            const sets = progress?.sets || [];
-            const isDone = Boolean(progress?.isFullyCompleted);
-
-            return (
-              <div key={exercise.id} className="relative">
-                {/* Numbered node on journey line */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    haptics.tap();
-                    setActiveStationIdx(idx);
-                  }}
-                  className={`absolute -left-8 top-5 size-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all cursor-pointer ${
-                    isDone
-                      ? 'bg-sage-300 text-sage-700 ring-2 ring-sage-500'
-                      : isExpanded
-                      ? 'bg-ink text-surface ring-2 ring-sage-500'
-                      : 'bg-surface text-ink-muted border border-hairline'
-                  }`}
-                >
-                  {isDone ? <CheckCircle2 size={14} /> : idx + 1}
-                </button>
-
-                {/* Card: Expanded vs Collapsed */}
-                <Card
-                  variant="plain"
-                  className={`transition-all ${
-                    isExpanded ? 'p-5 ring-1 ring-sage-300 shadow-card' : 'p-3.5 cursor-pointer hover:border-ink/20'
-                  }`}
-                  onClick={() => {
-                    if (!isExpanded) {
-                      haptics.tap();
-                      setActiveStationIdx(idx);
-                    }
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="size-14 rounded-2xl overflow-hidden shrink-0">
-                        <ExerciseThumb exercise={exercise} className="size-full" />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="text-base font-semibold text-ink leading-tight truncate">
-                          {exercise.name}
-                        </h3>
-                        <p className="text-xs text-ink-muted mt-0.5 tabular-nums">
-                          {exercise.targetSets} sets × {exercise.targetReps} • {exercise.muscle}
-                        </p>
-                      </div>
-                    </div>
-
-                    {exercise.videoUrl && onOpenVideo && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenVideo(exercise.videoUrl!, exercise.name);
-                        }}
-                        className="glass size-9 rounded-full flex items-center justify-center text-ink shrink-0 hover:bg-white active:scale-95 transition-all cursor-pointer"
-                        title="Watch video"
-                      >
-                        <Play size={13} className="fill-current ml-0.5" />
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Expanded set logger controls */}
-                  {isExpanded && (
-                    <div className="mt-4 pt-4 border-t border-hairline flex flex-col gap-4">
-                      {/* Set Beads timeline */}
-                      <SetBeads
-                        targetSets={exercise.targetSets}
-                        sets={sets}
-                        activeSetNumber={activeSetNum}
-                        onSelectSet={(sNum) => {
-                          setActiveSetNum(sNum);
-                          const existing = sets.find((s) => s.setNumber === sNum);
-                          if (existing && existing.weightKg !== '0') setDraftWeight(parseFloat(existing.weightKg) || 20);
-                          if (existing && existing.repsCompleted !== '0') setDraftReps(parseInt(existing.repsCompleted, 10) || 10);
-                        }}
-                        onToggleComplete={(sNum) => handleLogSet(myRole, exercise, sNum)}
-                      />
-
-                      {/* Steppers */}
-                      <div className="flex items-center gap-3">
-                        <Stepper
-                          label={`Set ${activeSetNum} Weight`}
-                          value={draftWeight}
-                          onChange={setDraftWeight}
-                          step={2.5}
-                          min={0}
-                          max={300}
-                          unit="kg"
-                        />
-                        <Stepper
-                          label={`Set ${activeSetNum} Reps`}
-                          value={draftReps}
-                          onChange={setDraftReps}
-                          step={1}
-                          min={1}
-                          max={50}
-                          unit="reps"
-                        />
-                      </div>
-
-                      {/* Log Set CTA */}
-                      <Button
-                        variant="primary"
-                        onClick={() => handleLogSet(myRole, exercise, activeSetNum)}
-                        className="w-full"
-                      >
-                        {sets.find((s) => s.setNumber === activeSetNum)?.isCompleted
-                          ? `Update Set ${activeSetNum}`
-                          : `Log Set ${activeSetNum} (${draftWeight}kg × ${draftReps})`}
-                      </Button>
-                    </div>
-                  )}
-                </Card>
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        /* TOGETHER MODE: Synced partner superset stations */
-        <div className="flex flex-col gap-4">
-          {Array.from({ length: maxStations }).map((_, stationIdx) => {
-            const p1Ex = p1Exercises[stationIdx];
-            const p2Ex = p2Exercises[stationIdx];
-            const stationLabel = p1Ex?.pair || p2Ex?.pair || `Station ${stationIdx + 1}`;
-
-            const p1Sets = p1Ex ? p1DayLog?.exercisesProgress[p1Ex.id]?.sets || [] : [];
-            const p2Sets = p2Ex ? p2DayLog?.exercisesProgress[p2Ex.id]?.sets || [] : [];
-
-            const p1Done = p1Ex ? Boolean(p1DayLog?.exercisesProgress[p1Ex.id]?.isFullyCompleted) : true;
-            const p2Done = p2Ex ? Boolean(p2DayLog?.exercisesProgress[p2Ex.id]?.isFullyCompleted) : true;
-            const isStationComplete = p1Done && p2Done;
-
-            return (
-              <Card
-                key={stationIdx}
-                variant={isStationComplete ? 'tinted' : 'plain'}
-                className="p-4 sm:p-5 flex flex-col gap-3.5 transition-all"
-              >
-                {/* Station Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-hairline">
-                  <div className="flex items-center gap-2">
-                    <span className="size-6 rounded-full bg-surface border border-hairline flex items-center justify-center text-xs font-bold text-ink">
-                      {stationIdx + 1}
-                    </span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-ink">
-                      {stationLabel}
-                    </span>
-                  </div>
-
-                  {isStationComplete && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-sage-700 bg-sage-200/60 px-2.5 py-0.5 rounded-full">
-                      <CheckCircle2 size={12} /> Complete
-                    </span>
-                  )}
-                </div>
-
-                {/* Partner 1 Row */}
-                {p1Ex && (
-                  <div
-                    className={`p-3.5 rounded-2xl bg-surface/80 border-l-[3.5px] border-p1-ink/60 border border-hairline flex flex-col gap-3 transition-all ${
-                      activePartnerRow === 'person_1' && activeStationIdx === stationIdx ? 'ring-1 ring-p1-ink/30' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Avatar name={p1Name} role="p1" size={32} />
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-semibold text-ink leading-tight truncate">{p1Ex.name}</h4>
-                          <p className="text-[11px] text-ink-muted tabular-nums">
-                            {p1Ex.targetSets} sets × {p1Ex.targetReps} • {p1Ex.muscle}
-                          </p>
-                        </div>
-                      </div>
-
-                      {p1Ex.videoUrl && onOpenVideo && (
-                        <button
-                          type="button"
-                          onClick={() => onOpenVideo(p1Ex.videoUrl!, p1Ex.name)}
-                          className="glass size-8 rounded-full flex items-center justify-center text-ink shrink-0 hover:bg-white active:scale-95 transition-all cursor-pointer"
-                        >
-                          <Play size={12} className="fill-current ml-0.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Set Beads */}
-                    <SetBeads
-                      targetSets={p1Ex.targetSets}
-                      sets={p1Sets}
-                      activeSetNumber={activeStationIdx === stationIdx && activePartnerRow === 'person_1' ? activeSetNum : 1}
-                      onSelectSet={(sNum) => {
-                        setActiveStationIdx(stationIdx);
-                        setActivePartnerRow('person_1');
-                        setActiveSetNum(sNum);
-                      }}
-                      onToggleComplete={(sNum) => handleLogSet('person_1', p1Ex, sNum)}
-                      roleTint="p1"
-                    />
-
-                    {/* Inline Stepper if selected */}
-                    {activeStationIdx === stationIdx && activePartnerRow === 'person_1' && (
-                      <div className="pt-2 flex flex-col gap-2.5 border-t border-hairline">
-                        <div className="flex items-center gap-2">
-                          <Stepper label="Weight" value={draftWeight} onChange={setDraftWeight} step={2.5} unit="kg" />
-                          <Stepper label="Reps" value={draftReps} onChange={setDraftReps} step={1} unit="reps" />
-                        </div>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleLogSet('person_1', p1Ex, activeSetNum)}
-                        >
-                          Log Set {activeSetNum} for {p1Name}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Partner 2 Row */}
-                {p2Ex && (
-                  <div
-                    className={`p-3.5 rounded-2xl bg-surface/80 border-l-[3.5px] border-p2-ink/60 border border-hairline flex flex-col gap-3 transition-all ${
-                      activePartnerRow === 'person_2' && activeStationIdx === stationIdx ? 'ring-1 ring-p2-ink/30' : ''
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <Avatar name={p2Name} role="p2" size={32} />
-                        <div className="min-w-0">
-                          <h4 className="text-sm font-semibold text-ink leading-tight truncate">{p2Ex.name}</h4>
-                          <p className="text-[11px] text-ink-muted tabular-nums">
-                            {p2Ex.targetSets} sets × {p2Ex.targetReps} • {p2Ex.muscle}
-                          </p>
-                        </div>
-                      </div>
-
-                      {p2Ex.videoUrl && onOpenVideo && (
-                        <button
-                          type="button"
-                          onClick={() => onOpenVideo(p2Ex.videoUrl!, p2Ex.name)}
-                          className="glass size-8 rounded-full flex items-center justify-center text-ink shrink-0 hover:bg-white active:scale-95 transition-all cursor-pointer"
-                        >
-                          <Play size={12} className="fill-current ml-0.5" />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Set Beads */}
-                    <SetBeads
-                      targetSets={p2Ex.targetSets}
-                      sets={p2Sets}
-                      activeSetNumber={activeStationIdx === stationIdx && activePartnerRow === 'person_2' ? activeSetNum : 1}
-                      onSelectSet={(sNum) => {
-                        setActiveStationIdx(stationIdx);
-                        setActivePartnerRow('person_2');
-                        setActiveSetNum(sNum);
-                      }}
-                      onToggleComplete={(sNum) => handleLogSet('person_2', p2Ex, sNum)}
-                      roleTint="p2"
-                    />
-
-                    {/* Inline Stepper if selected */}
-                    {activeStationIdx === stationIdx && activePartnerRow === 'person_2' && (
-                      <div className="pt-2 flex flex-col gap-2.5 border-t border-hairline">
-                        <div className="flex items-center gap-2">
-                          <Stepper label="Weight" value={draftWeight} onChange={setDraftWeight} step={2.5} unit="kg" />
-                          <Stepper label="Reps" value={draftReps} onChange={setDraftReps} step={1} unit="reps" />
-                        </div>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleLogSet('person_2', p2Ex, activeSetNum)}
-                        >
-                          Log Set {activeSetNum} for {p2Name}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+      {/* Mode + progress */}
+      {!currentSchedule.isRest && orderedRows.length > 0 && (
+        <div className="sticky top-2 z-20 mb-5 flex flex-col gap-2.5 glass-strong rounded-[22px] p-2.5 shadow-float">
+          {partner && (
+            <Segmented
+              label="Training mode"
+              value={mode}
+              onChange={val => {
+                haptics.tap();
+                setMode(val);
+                setFocusKey(null);
+              }}
+              options={[
+                { value: 'together', label: 'Together' },
+                { value: 'solo', label: 'Just me' },
+              ]}
+            />
+          )}
+          <div className="flex items-center gap-3 px-1.5">
+            <div
+              className="h-2 flex-1 rounded-full bg-sunk overflow-hidden"
+              role="progressbar"
+              aria-valuenow={progressPct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Session progress"
+            >
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-sage-300 to-sage-500 transition-[width] duration-500"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <span className="text-xs font-mono font-semibold tabular-nums text-ink">
+              {doneSets}/{totalSets}
+            </span>
+          </div>
         </div>
       )}
 
-      {/* Floating Rest Timer HUD */}
+      {currentSchedule.isRest ? (
+        <Card variant="tinted" className="p-8 text-center flex flex-col items-center gap-3">
+          <span className="size-12 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center">
+            <Leaf size={22} />
+          </span>
+          <h2 className="font-display text-xl font-medium text-ink">Scheduled rest day</h2>
+          <p className="text-xs text-ink-muted max-w-xs">Recovery is part of the program. Use the arrows to log ahead.</p>
+          <Button variant="glass" size="sm" onClick={() => navigate('/')}>
+            Back to today
+          </Button>
+        </Card>
+      ) : orderedRows.length === 0 ? (
+        <Card variant="tinted" className="p-8 text-center flex flex-col items-center gap-3">
+          <h2 className="font-display text-xl font-medium text-ink">No exercises scheduled</h2>
+          <p className="text-xs text-ink-muted">Load the 5-day duo split from the Today tab.</p>
+          <Button variant="primary" size="sm" onClick={() => navigate('/')}>
+            Go to today
+          </Button>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {stations.map((station, si) => (
+            <section key={station.label || si} className="flex flex-col gap-2.5" aria-label={station.label || 'Exercises'}>
+              {mode === 'together' && (
+                <div className="flex items-center gap-2 px-1">
+                  <span className="size-6 rounded-full bg-ink text-surface flex items-center justify-center text-[11px] font-bold">
+                    {si + 1}
+                  </span>
+                  <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-ink-muted">{station.label}</h2>
+                  {station.rows.every(isRowDone) && (
+                    <span className="ml-auto text-[11px] font-semibold text-sage-700">Station complete</span>
+                  )}
+                </div>
+              )}
+              {station.rows.map(r => {
+                const key = rowKey(r);
+                return (
+                  <ExerciseRow
+                    key={key}
+                    exercise={r.exercise}
+                    sets={setsFor(r)}
+                    role={r.role}
+                    ownerName={nameFor(r.role)}
+                    showOwner={mode === 'together'}
+                    isExpanded={activeKey === key}
+                    isDone={isRowDone(r)}
+                    last={lastPerformance(priorLogs[r.role], r.exercise.id, selectedDateStr)}
+                    best={priorBest[r.role].get(r.exercise.id)}
+                    dateStr={selectedDateStr}
+                    onExpand={() => setFocusKey(activeKey === key ? '' : key)}
+                    onLog={(n, w, reps) => handleLog(r, n, w, reps)}
+                    onUndo={n => handleUndo(r, n)}
+                    onExerciseComplete={() => advanceFrom(r)}
+                    onOpenVideo={onOpenVideo}
+                  />
+                );
+              })}
+            </section>
+          ))}
+        </div>
+      )}
+
       <RestTimerHUD
         secondsRemaining={restSecondsRemaining}
         isRunning={isRestTimerRunning}
@@ -530,18 +311,36 @@ export function TrainPage({ onOpenVideo }: TrainPageProps) {
         onSkip={skipRest}
       />
 
-      {/* SESSION COMPLETE TROPHY CARD */}
       {isSessionFinished && (
-        <Card variant="tinted" className="mt-8 p-6 text-center flex flex-col items-center gap-3 animate-rise">
-          <div className="size-14 rounded-full bg-butter/60 flex items-center justify-center text-ink">
-            <Trophy size={28} className="text-sage-700" />
+        <Card variant="tinted" className="mt-8 p-6 flex flex-col items-center gap-4 text-center animate-rise">
+          <span className="size-14 rounded-full bg-butter/70 flex items-center justify-center">
+            <Trophy size={26} className="text-sage-700" />
+          </span>
+          <div>
+            <h2 className="font-display text-2xl font-medium text-ink">Session complete</h2>
+            <p className="text-xs text-ink-muted mt-1">
+              {mode === 'together' ? 'Both of you hit every set.' : 'Every target set logged.'}
+            </p>
           </div>
-          <h2 className="font-display text-2xl font-medium text-ink">Session Complete!</h2>
-          <p className="text-xs text-ink-muted max-w-xs">
-            All target sets for today have been logged. Great work training together.
-          </p>
-          <Button variant="primary" onClick={() => navigate('/')} className="mt-2">
-            Back to Today Summary
+          <dl className="grid grid-cols-3 gap-2 w-full">
+            {[
+              { icon: <Dumbbell size={14} />, label: 'Volume', value: formatVolume(summary.volume) },
+              { icon: <Layers size={14} />, label: 'Sets', value: String(doneSets) },
+              summary.prs > 0
+                ? { icon: <Trophy size={14} />, label: 'PRs', value: String(summary.prs) }
+                : { icon: <Timer size={14} />, label: 'Minutes', value: summary.minutes !== null ? String(summary.minutes) : '—' },
+            ].map(stat => (
+              <div key={stat.label} className="rounded-2xl bg-surface/80 border border-hairline p-3">
+                <dt className="flex items-center justify-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
+                  {stat.icon}
+                  {stat.label}
+                </dt>
+                <dd className="font-display text-xl text-ink tabular-nums mt-0.5">{stat.value}</dd>
+              </div>
+            ))}
+          </dl>
+          <Button variant="primary" onClick={() => navigate('/')} className="w-full">
+            View progress
           </Button>
         </Card>
       )}

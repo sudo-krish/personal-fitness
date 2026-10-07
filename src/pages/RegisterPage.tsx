@@ -3,9 +3,8 @@ import { AppRoute } from '../router/routes';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { UnderlineField } from '../components/ui/UnderlineField';
-import { ArchFrame } from '../components/art/ArchFrame';
+import { AuthShell } from '../components/shell/AuthShell';
 import { Swash } from '../components/art/Swash';
-import { Contours } from '../components/art/Contours';
 import { AlertCircle } from 'lucide-react';
 
 interface RegisterPageProps {
@@ -44,26 +43,15 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-canvas flex flex-col items-center justify-center p-5 relative overflow-hidden animate-rise">
-      <Contours seed="register" lines={6} drift className="text-ink/5" />
-
-      <div className="relative z-10 w-full max-w-[420px] flex flex-col items-center">
-        {/* ARCH PHOTO FRAME */}
-        <div className="mb-6 flex justify-center">
-          <ArchFrame
-            src="/assets/partner-training.jpg"
-            alt="Duo Training"
-            className="w-36 h-48 shadow-card"
-          />
-        </div>
-
+    <AuthShell tagline="Build the plan once. Train it together.">
+      <div className="flex flex-col">
         {/* HEADLINE */}
-        <div className="text-center mb-6">
-          <h1 className="font-display text-3xl font-medium text-ink leading-tight">
+        <div className="mb-6">
+          <h1 className="font-display text-4xl font-medium text-ink leading-tight">
             Start <Swash>together</Swash>
           </h1>
-          <p className="text-xs text-ink-muted mt-1">
-            Create your primary login credentials and begin duo setup.
+          <p className="text-sm text-ink-muted mt-1.5">
+            Create the shared login, then set up both athlete profiles.
           </p>
         </div>
 
@@ -76,7 +64,7 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
         )}
 
         {/* FORM CARD */}
-        <Card variant="plain" className="w-full p-6 sm:p-8 shadow-card">
+        <Card variant="plain" className="w-full p-6 sm:p-8 shadow-float glass-strong">
           <form onSubmit={handleNext} className="flex flex-col gap-5">
             <UnderlineField
               label="Primary Username"
@@ -107,7 +95,7 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
             />
 
             <Button type="submit" variant="primary" size="md" className="w-full mt-2">
-              Continue to Athlete Profiles →
+              Continue to athlete profiles →
             </Button>
           </form>
 
@@ -126,6 +114,6 @@ export function RegisterPage({ onNavigate }: RegisterPageProps) {
           </div>
         </Card>
       </div>
-    </div>
+    </AuthShell>
   );
 }
